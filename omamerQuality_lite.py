@@ -24,7 +24,7 @@ import omamer
 import omamer.database
 from omamer.hierarchy import get_descendants, get_leaves, get_root_leaf_offsets , get_children
 import omamer_species_placement as osp
-import taxonomic_placement as tp
+#import taxonomic_placement as tp
 
 
 def build_arg_parser():
@@ -176,12 +176,12 @@ def get_full_lineage_omamer(taxname, tax_tab, tax_buff = False,  descendant = Fa
 	
 
 
-def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff):
+def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, allow_hog_redun =True):
     
     alltaxa = dict()
     j=0
     descendant = None
-    
+    seen_hogs = list()
 
     hog_off2subf = hog_tab['OmaID'] 
     subf2hog_off = dict(zip(hog_off2subf, range(hog_off2subf.size)))
@@ -193,7 +193,12 @@ def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff):
             continue	
         hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
         taxa = get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
-        tax_off2tax = tax_tab['ID'] 
+        tax_off2tax = tax_tab['ID']
+        if not allow_hog_redun:
+            if omamapping['hogid'] in seen_hogs:
+                continue
+            else:
+                seen_hogs.append(omamapping['hogid'])
         for taxon in taxa:
             taxname = tax_off2tax[taxon]
             if taxname in alltaxa :
@@ -206,6 +211,51 @@ def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff):
     alltaxa = {k: v for k, v in sorted(alltaxa.items(), key=lambda item: item[1], reverse=True)}
     #alltaxa = { k:v for k in sorted(alltaxa.iteritems(), key=itemgetter(1), reverse=True)}
     return alltaxa
+
+def get_HOGs_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff):
+    tax_HOGs = dict()
+    alltaxa = dict()
+    j=0
+    descendant = None
+    
+    hog_off2subf = hog_tab['OmaID'] 
+    subf2hog_off = dict(zip(hog_off2subf, range(hog_off2subf.size)))
+    tax_off2tax = tax_tab['ID']
+    for omamapping in omamerdata:
+        j+=1
+        if omamapping['hogid'] == 'na':
+            continue    
+        hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
+        taxa = get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
+        tax_off2tax = tax_tab['ID'] 
+        for taxon in taxa:
+            taxname = tax_off2tax[taxon]
+            if taxname in alltaxa :
+                alltaxa[taxname]+=1
+                tax_HOGs[taxname].append((omamapping['hogid'],omamapping['qseqid']))
+            else: 
+                alltaxa[taxname]=1
+                tax_HOGs[taxname] = list()
+                tax_HOGs[taxname].append((omamapping['hogid'],omamapping['qseqid']))
+
+    #print(len(alltaxa))
+    #print(alltaxa)
+    
+    alltaxa = {k: v for k, v in sorted(alltaxa.items(), key=lambda item: item[1], reverse=True)}
+
+    return alltaxa, tax_HOGs
+
+def get_lineage_comp(alltaxa, clade, tax_tab, tax_buff):
+    lineage = get_full_lineage_omamer(clade.encode('ascii'), tax_tab, tax_buff, True)
+    compatible = 0
+    non_comp = 0
+    for k, v in alltaxa.items():
+        if k in lineage:
+            compatible+=v
+        else:
+            non_comp+=v
+    return compatible, non_comp
+
 
 def get_lower_noncontradicting(alltaxa, tax_tab):
     current_lower_name = None
@@ -329,10 +379,11 @@ def print_results(res):
 #print(root_hog)
 
 #Mutliple level of a same HOG can be counted as is   
-def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cprot_buff, chog_buff, tax_buff, hogtax_buff,  duplicate ) :
+def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cprot_buff, chog_buff, tax_buff, hogtax_buff,  duplicate, threshold=0.9 ) :
     found_hog = list()
     poss_hog = list()
     seen_hog = list()
+    other_cl_hog = list()
     lineage = get_full_lineage_omamer(clade.encode('ascii'), tax_tab, tax_buff, True)
     sp_target = get_species_from_taxon(clade, tax_tab, sp_tab, tax_buff)
 
@@ -373,7 +424,7 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
         inter = set(sp_hog).intersection(set(sp_target))
         #print(len(inter))
         #print(len(sp_target))
-        if len(inter)>0.9*len(sp_target):
+        if len(inter)>=threshold*len(sp_target):
             found_hog.append(t)
         #else:
         #    print(t)
@@ -385,12 +436,14 @@ def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
     all_subf = list()
     all_prot = list()    
     found = list()
+    seen_hog_id = list()
     results = { 'Found':[] , 'Lost' : [], 'Duplicated': [], 'Underspecific':[], 'Overspecific': []}
     for data in omamer_data:
         all_prot.append(data['qseqid'])
         all_subf.append(data['hogid'])
 
     for hog in conserved_hogs :
+        done = False
         identifier = hog['OmaID'].decode()
         if identifier in all_subf:
             nb_found = all_subf.count(identifier)
@@ -404,109 +457,115 @@ def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
 
             else :
                 results['Found'].append(identifier)
+            done = True
 
-        else:
-            in_subhog = False
-            
-            count_os = 0
-            for subhog in [x['OmaID'].decode() for x in get_descendant_HOGs(hog, hog_tab, chog_buff)]:
+        count_os = 0
+        for subhog in [x['OmaID'].decode() for x in get_descendant_HOGs(hog, hog_tab, chog_buff)]:
 		
-                if subhog in all_subf:
-                    found.append(all_prot[all_subf.index(subhog)])
-                    in_subhog = True
-                    count_os+=1
-            if count_os>0:
+            if subhog in all_subf:
+                if subhog not in seen_hog_id:
+                    seen_hog_id.append(subhog)
+                    nbf = all_subf.count(subhog)
+                    st_ind = 0
+                    for i in range(nbf):
+                        ind = all_subf.index(subhog, st_ind)
+                        found.append(all_prot[ind])
+                        st_ind = ind+1
+                count_os+=1
+            if count_os>0 and not done:
                 results['Overspecific'].append(identifier)
-            if not in_subhog:                   
-                in_superhog = False
-                for superhog in [x['OmaID'].decode() for x in get_ancestral_HOGs(hog, hog_tab, chog_buff)]:
-                    if superhog in all_subf:
-                        found.append(all_prot[all_subf.index(superhog)])
+                done = True
+            
+        for superhog in [x['OmaID'].decode() for x in get_ancestral_HOGs(hog, hog_tab, chog_buff)]:
+            if superhog in all_subf:
+                if superhog not in seen_hog_id:
+                    seen_hog_id.append(superhog)
+                    nbf = all_subf.count(superhog)
+                    st_ind = 0
+                    for i in range(nbf):
+                        ind = all_subf.index(superhog, st_ind)
+                        found.append(all_prot[ind])
+                        st_ind = ind+1
+                if not done:
+                    results['Underspecific'].append(identifier)
+                    done = True
+                    #break
+        if not done:
+            results['Lost'].append(identifier)
 
-                        results['Underspecific'].append(identifier)
-                        in_superhog = True
-                        break
-
-                if not in_superhog:
-                    results['Lost'].append(identifier)
-    print('set')
-    print(len(all_prot))
-    print(len(set(found)))
     not_in_clade = list(set(all_prot).difference(set(found)))    
-    return results, not_in_clade
+    return results, found, not_in_clade
 
 def get_omamer_qscore(omamerfile, dbpath, omadbpath,  stordir, taxid=None, unmapped=True):
-	
-	db = omamer.database.Database(dbpath)
-	#Variables
-	hog_tab = db._hog_tab[:]
-	prot_tab = db._prot_tab
-	sp_tab = db._sp_tab
-	tax_tab = db._tax_tab[:]
-	fam_tab = db._fam_tab
-	cprot_buff = db._cprot_arr
-	tax_buff = db._ctax_arr
-	chog_buff = db._chog_arr
-	hogtax_buff = db._hog_taxa_buff
-	#if os.path.exists(dbpath+'.h2t.pkl'):
-	#	infile = open(dbpath+'.h2t.pkl', 'rb')
-	#	hogtax_tab, hogtax_buff = pickle.load(infile)
-	#else :
-	#	hogtax_tab, hogtax_buff = get_hog2taxa(hog_tab, sp_tab, prot_tab, cprot_buff, tax_tab, chog_buff)
-	#	outfile = open(dbpath+'.h2t.pkl', 'wb')
-	#	pickle.dump((hogtax_tab, hogtax_buff),outfile)
+
+    db = omamer.database.Database(dbpath)
+    #Variables
+    hog_tab = db._hog_tab[:]
+    prot_tab = db._prot_tab
+    sp_tab = db._sp_tab
+    tax_tab = db._tax_tab[:]
+    fam_tab = db._fam_tab
+    cprot_buff = db._cprot_arr
+    tax_buff = db._ctax_arr
+    chog_buff = db._chog_arr
+    hogtax_buff = db._hog_taxa_buff
 	 
-	allres = dict()
-	#Store the temporary results in a file to avoid recomputing and make it computationally feasible
-	if os.path.isfile(omamerfile):
-		#print('Working with '+omamerfile)
-		#print(taxid)
-		#print(stordir+omamerfile.split('/')[-1].strip('.fasta')+".omq")
-		#print("Before working")
-		if not os.path.isfile(stordir+omamerfile.split('/')[-1].strip('.fasta')+".omq"): 
-
-			#print('Parse OMAmer')
-
-
-			omamdata, not_mapped  = parseOmamer(omamerfile)
-			#print(len(omamdata))
-			#print('get Close')
-
-			if taxid==None:
-				close = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
-			#close = getCloseTaxa(omamdata, omadbpath)
-			#print('Close taxa found')
-				closest =  get_lower_noncontradicting(close, tax_tab)
-				closest_corr = osp.get_sampled_taxa(closest, 2 , tax_tab, sp_tab, tax_buff)
-				store_close_level(stordir+omamerfile.split('/')[-1].strip('.fasta')+".tax", {'Sampled': str(closest_corr.decode()),
+    allres = dict()
+    #Store the temporary results in a file to avoid recomputing and make it computationally feasible
+    if os.path.isfile(omamerfile):
+        if not os.path.isfile(stordir+omamerfile.split('/')[-1].strip('.fasta')+".omq"): 
+            #print('Parse OMAmer')
+            omamdata, not_mapped  = parseOmamer(omamerfile)
+            #print('get Close')
+            if taxid==None:
+                close = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
+                #print('Close taxa found')
+                closest =  get_lower_noncontradicting(close, tax_tab)
+                closest_corr = osp.get_sampled_taxa(closest, 2 , tax_tab, sp_tab, tax_buff)
+                store_close_level(stordir+omamerfile.split('/')[-1].strip('.fasta')+".tax", {'Sampled': str(closest_corr.decode()),
                                                                                                         'Closest' : str(closest.decode()),
-													'All'  : close
+                                                   'All'  : close
                                                                                                         })
-			else :
-				lin = get_lineage_ncbi(taxid)
-				closest = find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
-				closest_corr = osp.get_sampled_taxa(closest, 2 , tax_tab, sp_tab, tax_buff)
-				store_close_level(stordir+omamerfile.split('/')[-1].strip('.fasta')+".tax", {'Sampled': str(closest.decode()),
+            else :
+                lin = get_lineage_ncbi(taxid)
+                closest = find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
+                closest_corr = osp.get_sampled_taxa(closest, 5 , tax_tab, sp_tab, tax_buff)
+                store_close_level(stordir+omamerfile.split('/')[-1].strip('.fasta')+".tax", {'Sampled': str(closest.decode()),
                                                                                                         'Closest' : str(closest.decode())})
-			conshog, cladehog = get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True)
-			#Two modes? : Normal and listing unexpected protein mapping?
-			if unmapped :
-				print('HOGs')
-				print(len(cladehog))
-				wholeres, nic = found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
-				print('Unmapped')
-				print(len(not_mapped))
-				print('Not mapped to clade')				
-				print(len(nic))
-				store_results(stordir+omamerfile.split('/')[-1].strip('.fasta')+".ump", {'Unmapped' : not_mapped, 'UnClade' : nic})
-			res, nic = found_with_omamer(omamdata ,conshog, hog_tab, chog_buff)
-			store_results(stordir+omamerfile.split('/')[-1].strip('.fasta')+".omq", res) 
+            #Conshog : HOG with 90% representative of the target lineage
+            #Cladehog : HOG with at least 1 representative of the target libeage
+            conshog, cladehog = get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True)
+            #Two modes? : Normal and listing unexpected protein mapping?
+            if unmapped :
+                print('HOGs')
+                print(len(cladehog))
+                wholeres, found_clade, nic = found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
+                print('Unmapped')
+                print(len(not_mapped))
+                print('Not mapped to clade')				
+                print(len(nic))
+                store_results(stordir+omamerfile.split('/')[-1].strip('.fasta')+".ump", {'Unmapped' : not_mapped, 'UnClade' : nic})
+            #wholeres, whfound, nic = found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
+
+            res, found_cons, nicons = found_with_omamer(omamdata ,conshog, hog_tab, chog_buff)
+
+            store_results(stordir+omamerfile.split('/')[-1].strip('.fasta')+".omq", res) 
+            store_summary(stordir+omamerfile.split('/')[-1].strip('.fasta')+".sum",
+                            wholeres, res, found_cons, not_mapped, nicons, nic)
 def store_results(storfile, results):
 	with open(storfile, 'w') as storage:
 		for categ, hoglist in results.items():
 			storage.write('>'+categ+'\n')
 			for elem in hoglist:
 				storage.write(elem+'\n')
+def store_summary(storfile, res_clade, results, found_cons, unmap, nicons, nic):
+    with open(storfile,'w') as storage:
+        total = len(results['Found'])+len(results['Duplicated'])+ len(results['Overspecific']) + len(results['Underspecific']) + len(results['Lost'])
+        tot_genes = len(unmap)+len(nicons)+len(found_cons)
+        storage.write(f'F:{len(results["Found"])},D:{len(results["Duplicated"])},O:{len(results["Overspecific"])},U:{len(results["Underspecific"])},L:{len(results["Lost"])}\n') 
+        storage.write(f'F:{100*len(results["Found"])/total:4.2f}%,D:{100*len(results["Duplicated"])/total:4.2f}%,O:{100*len(results["Overspecific"])/total:4.2f}%,U:{100*len(results["Underspecific"])/total:4.2f}%,L:{100*len(results["Lost"])/total:4.2f}%\n')
+        storage.write(f'C:{100*len(found_cons)/tot_genes:4.2f}%,L:{100*(len(nicons)-len(nic))/tot_genes:4.2f}%,O:{100*len(nic)/tot_genes:4.2f}%,U:{100*len(unmap)/tot_genes:4.2f}%\n')
+
 
 def store_close(storfile, close):
 	with open(storfile, 'w') as castor:
