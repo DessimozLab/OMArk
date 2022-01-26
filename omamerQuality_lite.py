@@ -28,20 +28,19 @@ import omamer_species_placement as osp
 
 
 def build_arg_parser():
-	"""Handle the parameter sent when executing the script from the terminal
+    """Handle the parameter sent when executing the script from the terminal
 
-	Returns
-	-----------
-	A parser object with the chosen option and parameters"""
+    Returns
+    -----------
+    A parser object with the chosen option and parameters"""
 
-	parser = argparse.ArgumentParser(description="Compute an OMA quality score from the OMAmer file of a proteome.")   
-	parser.add_argument('-f', '--file', help="The OMAmer file to read." )	
-	parser.add_argument('-d', '--database', help="The OMAmer database.")
-	parser.add_argument('-o', '--outputFolder', help="The folder containing output data the script wilp generate.")
-	parser.add_argument('-m', '--oma', help="Path to the OMA Database")
-	parser.add_argument('-t', '--taxid', help='Taxonomic identifier', default=None)
-
-	return parser
+    parser = argparse.ArgumentParser(description="Compute an OMA quality score from the OMAmer file of a proteome.")   
+    parser.add_argument('-f', '--file', help="The OMAmer file to read." )	
+    parser.add_argument('-d', '--database', help="The OMAmer database.")
+    parser.add_argument('-o', '--outputFolder', help="The folder containing output data the script wilp generate.")
+    parser.add_argument('-t', '--taxid', help='Taxonomic identifier', default=None)
+    parser.add_argument('-of', '--og_fasta', help='Original FASTA file', default=None)
+    return parser
 
 
 
@@ -193,7 +192,6 @@ def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, al
             continue	
         hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
         taxa = get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
-        tax_off2tax = tax_tab['ID']
         if not allow_hog_redun:
             if omamapping['hogid'] in seen_hogs:
                 continue
@@ -212,12 +210,13 @@ def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, al
     #alltaxa = { k:v for k in sorted(alltaxa.iteritems(), key=itemgetter(1), reverse=True)}
     return alltaxa
 
-def get_HOGs_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff):
+def get_HOGs_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, allow_hog_redun =True):
     tax_HOGs = dict()
     alltaxa = dict()
     j=0
     descendant = None
-    
+    seen_hogs = list()
+ 
     hog_off2subf = hog_tab['OmaID'] 
     subf2hog_off = dict(zip(hog_off2subf, range(hog_off2subf.size)))
     tax_off2tax = tax_tab['ID']
@@ -227,7 +226,12 @@ def get_HOGs_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff):
             continue    
         hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
         taxa = get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
-        tax_off2tax = tax_tab['ID'] 
+        if not allow_hog_redun:
+            if omamapping['hogid'] in seen_hogs:
+                continue
+            else:
+                seen_hogs.append(omamapping['hogid'])
+  
         for taxon in taxa:
             taxname = tax_off2tax[taxon]
             if taxname in alltaxa :
@@ -366,6 +370,139 @@ def get_descendant_HOGs(hog, hog_tab, chog_buff):
     return all_hogs
 
 
+def get_nb_hogs_by_clade(hog_tab, tax_tab):
+    hog_by_tax = dict()
+    for hog_off in range(hog_tab.size):
+        taxoff = hog_tab[hog_off]['LCAtaxOff']
+        tax = tax_tab[taxoff]["ID"]
+        if tax not in hog_by_tax:
+            hog_by_tax[tax]=0
+        hog_by_tax[tax]+=1
+    return hog_by_tax
+
+#Species placements
+
+#Get all lineages from which proteins come in the analyzed proteomes considering the HOGs where the placement was done.
+def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, chog_buff):
+    cutoff_percentage = 0.01
+    #Get taxa in which placement were made with the number of placement, couting individual HOGs only once
+    all_tax = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff,  allow_hog_redun =False)
+    
+    #Condider only taxa with more than 2 hits
+    filter_all_tax = {key: value for (key, value) in all_tax.items() if value > 1 }
+
+    #Consider only taxa in which at least one percent of the registered HOGs has a hit
+    all_taxa_perc = dict()
+    hog_by_tax = get_nb_hogs_by_clade(hog_tab, tax_tab)
+    for k, v in filter_all_tax.items():
+        all_taxa_perc[k] = float(v)/float(hog_by_tax[k])
+    all_taxa_perc = {k: v for k, v in sorted(all_taxa_perc.items(), key=lambda item: item[1], reverse=True)}
+    filter_all_taxa_perc = {key: value for (key, value) in all_taxa_perc.items() if value > cutoff_percentage }
+
+    #Create a tree with all target lineages and uses it to find likely taxa mixture
+    t =tree_from_taxlist(filter_all_taxa_perc, tax_tab )
+    all_plac  = get_likely_spec(t,filter_all_taxa_perc)
+
+    return all_plac
+
+
+def tree_from_taxlist(all_taxa, tax_tab):
+
+    t = ete3.Tree()
+    existing_node = list()
+    curr_node = t
+    #Creating the tree only using lineage present in OMAmer, need to get the full lineage for this
+    for name, count  in all_taxa.items():
+        lineage = get_full_lineage_omamer(name, tax_tab)
+        for clade in reversed(lineage):
+            clade = clade.decode()
+            if clade not in existing_node:
+                curr_node = curr_node.add_child(name=clade)
+                existing_node.append(clade)
+            else:
+                curr_node = t&clade
+
+    return t
+
+#Recursive function tacking a tree of clade and the percentage of HOG found for each clade to find the most likely level represented in a proteome.
+#Return a list of clades, the first one being the main representative at a level, and the rest the possible contaminants.
+def get_likely_spec(t, score, depth_threshold = 2, score_factor = 2/3):
+    cur_score = score.get(t.name.encode(),0)
+    if t.is_leaf():
+        return [(t.name, cur_score,1)]
+    all_child = list()
+    for child in t.get_children():
+        all_child += get_likely_spec(child,score)
+    max_score = 0
+    best_ranking = None
+    contaminants =  list()
+
+    for child in all_child:
+        if child[1] > max_score:
+            if best_ranking:
+                #Have a measure of shallowness
+                if best_ranking[2]>depth_threshold:
+                    contaminants.append(best_ranking)
+            best_ranking = child
+            max_score = child[1]
+        elif child[2]>depth_threshold:
+            contaminants.append(child)
+    if max_score > cur_score*score_factor:
+        best_score = cur_score
+        if max_score > cur_score:
+            best_score = max_score
+        new_main = (best_ranking[0], best_score,best_ranking[2]+1)
+    else:
+        new_main = (t.name, cur_score, 0)
+        contaminants = list()
+    return [new_main] + contaminants
+
+def get_prot_by_clades(all_plac, omamdata, hog_tab, tax_tab, tax_buff, chog_buff):
+    all_tax, prot_by_tax = get_HOGs_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff,  allow_hog_redun = True)
+    t_complete = tree_from_taxlist(all_tax, tax_tab)
+    prot_clade = compute_protein_breakdowm(all_plac, t_complete, prot_by_tax)
+    return prot_clade
+
+
+
+def compute_protein_breakdowm(all_plac,t, prot_by_taxa):
+    prots_by_clade = dict()
+    clade_list = [ x[0] for x in all_plac]
+    node_list = [t&x for x in clade_list]
+    ancestor_list = list()
+    for node in node_list:
+        cur_closest_ancestor = None
+        cur_depth = 0
+        for snd_node in node_list:
+            if node!=snd_node:
+                    ca = t.get_common_ancestor(node, snd_node)
+                    depth = t.get_distance(ca)
+                    if not cur_closest_ancestor or depth>cur_depth:
+                        cur_closest_ancestor = ca
+                        cur_depth = depth
+        ancestor_list.append(cur_closest_ancestor)
+    for i in range(len(node_list)):
+        clade = clade_list[i]
+        cur_node = node_list[i]
+        ancestor = ancestor_list[i]
+        seen_nodes = list()
+        level = 0
+        all_prots = list()
+
+        while cur_node.up != ancestor:
+            all_prots.append((level, cur_node.name, prot_by_taxa.get(cur_node.name.encode(),[])))
+            seen_nodes.append(cur_node.name)
+            all_children = cur_node.get_descendants()
+            for node_child in all_children:
+                if node_child.name not in seen_nodes:
+                    all_prots.append((level, node_child.name, prot_by_taxa.get(node_child.name.encode(),[])))
+                    seen_nodes.append(node_child.name)
+
+            cur_node = cur_node.up
+            level += 1 
+        
+        prots_by_clade[clade] = all_prots
+    return prots_by_clade
 
 def print_results(res):
     print(len(res['Found']))
@@ -496,7 +633,7 @@ def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
     not_in_clade = list(set(all_prot).difference(set(found)))    
     return results, found, not_in_clade
 
-def get_omamer_qscore(omamerfile, dbpath, omadbpath,  stordir, taxid=None, unmapped=True):
+def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, contamination= True, original_FASTA_file = None, force = True):
 
     db = omamer.database.Database(dbpath)
     #Variables
@@ -513,24 +650,29 @@ def get_omamer_qscore(omamerfile, dbpath, omadbpath,  stordir, taxid=None, unmap
     allres = dict()
     #Store the temporary results in a file to avoid recomputing and make it computationally feasible
     if os.path.isfile(omamerfile):
-        if not os.path.isfile(stordir+omamerfile.split('/')[-1].strip('.fasta')+".omq"): 
+
+        basefile = '.'.join(omamerfile.split('/')[-1].split('.')[:-1])
+        if force or not os.path.isfile(stordir+'/'+basefile+".omq"): 
             #print('Parse OMAmer')
             omamdata, not_mapped  = parseOmamer(omamerfile)
             #print('get Close')
+            placements = get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
+
             if taxid==None:
-                close = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
+                #close = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
                 #print('Close taxa found')
-                closest =  get_lower_noncontradicting(close, tax_tab)
-                closest_corr = osp.get_sampled_taxa(closest, 2 , tax_tab, sp_tab, tax_buff)
-                store_close_level(stordir+omamerfile.split('/')[-1].strip('.fasta')+".tax", {'Sampled': str(closest_corr.decode()),
-                                                                                                        'Closest' : str(closest.decode()),
+                #closest =  get_lower_noncontradicting(close, tax_tab)
+                likely_clade =  placements[0][0]
+                closest_corr = osp.get_sampled_taxa(likely_clade.encode(), 5, tax_tab, sp_tab, tax_buff)
+                store_close_level(stordir+'/'+basefile+".tax", {'Sampled': str(closest_corr.decode()),
+                                                                                                        'Closest' : str(likely_clade()),
                                                    'All'  : close
                                                                                                         })
             else :
                 lin = get_lineage_ncbi(taxid)
                 closest = find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
                 closest_corr = osp.get_sampled_taxa(closest, 5 , tax_tab, sp_tab, tax_buff)
-                store_close_level(stordir+omamerfile.split('/')[-1].strip('.fasta')+".tax", {'Sampled': str(closest.decode()),
+                store_close_level(stordir+'/'+basefile+".tax", {'Sampled': str(closest_corr.decode()),
                                                                                                         'Closest' : str(closest.decode())})
             #Conshog : HOG with 90% representative of the target lineage
             #Cladehog : HOG with at least 1 representative of the target libeage
@@ -544,28 +686,52 @@ def get_omamer_qscore(omamerfile, dbpath, omadbpath,  stordir, taxid=None, unmap
                 print(len(not_mapped))
                 print('Not mapped to clade')				
                 print(len(nic))
-                store_results(stordir+omamerfile.split('/')[-1].strip('.fasta')+".ump", {'Unmapped' : not_mapped, 'UnClade' : nic})
+                store_results(stordir+'/'+basefile+".ump", {'Unmapped' : not_mapped, 'UnClade' : nic})
             #wholeres, whfound, nic = found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
-
+            if contamination and original_FASTA_file:
+                prot_clade = get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
+                store_contaminant_FASTA(stordir, basefile, prot_clade, original_FASTA_file)
             res, found_cons, nicons = found_with_omamer(omamdata ,conshog, hog_tab, chog_buff)
 
-            store_results(stordir+omamerfile.split('/')[-1].strip('.fasta')+".omq", res) 
-            store_summary(stordir+omamerfile.split('/')[-1].strip('.fasta')+".sum",
-                            wholeres, res, found_cons, not_mapped, nicons, nic)
+            store_results(stordir+'/'+basefile+".omq", res) 
+            store_summary(stordir+'/'+basefile+".sum",
+                            wholeres, res, found_cons, not_mapped, nicons, nic, placements, prot_clade)
+
+
 def store_results(storfile, results):
 	with open(storfile, 'w') as storage:
 		for categ, hoglist in results.items():
 			storage.write('>'+categ+'\n')
 			for elem in hoglist:
 				storage.write(elem+'\n')
-def store_summary(storfile, res_clade, results, found_cons, unmap, nicons, nic):
+def store_summary(storfile, res_clade, results, found_cons, unmap, nicons, nic, contaminant = False, prot_clade = False):
     with open(storfile,'w') as storage:
         total = len(results['Found'])+len(results['Duplicated'])+ len(results['Overspecific']) + len(results['Underspecific']) + len(results['Lost'])
         tot_genes = len(unmap)+len(nicons)+len(found_cons)
         storage.write(f'F:{len(results["Found"])},D:{len(results["Duplicated"])},O:{len(results["Overspecific"])},U:{len(results["Underspecific"])},L:{len(results["Lost"])}\n') 
         storage.write(f'F:{100*len(results["Found"])/total:4.2f}%,D:{100*len(results["Duplicated"])/total:4.2f}%,O:{100*len(results["Overspecific"])/total:4.2f}%,U:{100*len(results["Underspecific"])/total:4.2f}%,L:{100*len(results["Lost"])/total:4.2f}%\n')
         storage.write(f'C:{100*len(found_cons)/tot_genes:4.2f}%,L:{100*(len(nicons)-len(nic))/tot_genes:4.2f}%,O:{100*len(nic)/tot_genes:4.2f}%,U:{100*len(unmap)/tot_genes:4.2f}%\n')
-
+        if contaminant:
+            storage.write('Detected species (Contaminants)\n')
+            for values in contaminant:
+                storage.write('\t'.join([str(x) for x in values]))
+                storage.write('\t'+str(len(prot_clade[values[0]][0][2]))+'\n')
+def store_contaminant_FASTA(stordir, basefile_name, prot_clade, original_FASTA_file):
+    seqs_by_id = dict()
+    with open(original_FASTA_file) as handle:
+        for record in Bio.SeqIO.parse(handle, "fasta"):
+            seqs_by_id[record.id] = record
+    for key, value in prot_clade.items():
+        seqs_from_cont = list()
+        for level_data in value:
+            level = level_data[0]
+            clade = level_data[1]
+            for prot_data in level_data[2]:
+                    seq = seqs_by_id[prot_data[1]]
+                    seq.description = seq.description +" Level="+str(level)+" ["+clade+"]"
+                    seqs_from_cont.append(seq)
+            with open(stordir+"/"+basefile_name+"_"+re.sub("[^0-9a-zA-Z]+", "_",key)+".fasta", "w") as out_handle:
+                    Bio.SeqIO.write(seqs_from_cont, out_handle, 'fasta')           
 
 def store_close(storfile, close):
 	with open(storfile, 'w') as castor:
@@ -584,18 +750,17 @@ def store_close_level(storfile, data):
 
 if __name__=='__main__':
 	
-	print('Setting up')
-	parser = build_arg_parser()  
-	arg = parser.parse_args()
-	omamerfile = arg.file
-	print(omamerfile)
-	dbpath = arg.database
-	outdir = arg.outputFolder
-	print(outdir)
-	omadb = arg.oma
-	print(omadb)
-	taxid = arg.taxid
-	print(taxid)
-	get_omamer_qscore(omamerfile, dbpath, omadb ,  outdir, taxid)
-	print('Done')
+    print('Setting up')
+    parser = build_arg_parser()  
+    arg = parser.parse_args()
+    omamerfile = arg.file
+    print(omamerfile)
+    dbpath = arg.database
+    outdir = arg.outputFolder
+    print(outdir)
+    taxid = arg.taxid
+    print(taxid)
+    original_fasta = arg.og_fasta
+    get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta)
+    print('Done')
 
