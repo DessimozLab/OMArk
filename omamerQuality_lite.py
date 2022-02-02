@@ -54,7 +54,7 @@ def parseOmamer(file):
         for line in f.readlines():
             data = dict()
             col = line.strip('\n').split('\t')
-            if col[1]=='na':
+            if col[1]=='na' or float(col[2])<0.8:
                 not_mapped.append(col[0])
                 continue
             for i in range(len(cat)) :
@@ -373,7 +373,7 @@ def get_descendant_HOGs(hog, hog_tab, chog_buff):
 def get_nb_hogs_by_clade(hog_tab, tax_tab):
     hog_by_tax = dict()
     for hog_off in range(hog_tab.size):
-        taxoff = hog_tab[hog_off]['LCAtaxOff']
+        taxoff = hog_tab[hog_off]['TaxOff']
         tax = tax_tab[taxoff]["ID"]
         if tax not in hog_by_tax:
             hog_by_tax[tax]=0
@@ -489,7 +489,7 @@ def compute_protein_breakdowm(all_plac,t, prot_by_taxa):
         level = 0
         all_prots = list()
 
-        while cur_node.up != ancestor:
+        while cur_node != ancestor:
             all_prots.append((level, cur_node.name, prot_by_taxa.get(cur_node.name.encode(),[])))
             seen_nodes.append(cur_node.name)
             all_children = cur_node.get_descendants()
@@ -656,7 +656,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
             #print('Parse OMAmer')
             omamdata, not_mapped  = parseOmamer(omamerfile)
             #print('get Close')
-            placements = get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
+            placements = get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)      
 
             if taxid==None:
                 #close = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
@@ -676,7 +676,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
                                                                                                         'Closest' : str(closest.decode())})
             #Conshog : HOG with 90% representative of the target lineage
             #Cladehog : HOG with at least 1 representative of the target libeage
-            conshog, cladehog = get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True)
+            conshog, cladehog = get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
             #Two modes? : Normal and listing unexpected protein mapping?
             if unmapped :
                 print('HOGs')
@@ -688,9 +688,11 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
                 print(len(nic))
                 store_results(stordir+'/'+basefile+".ump", {'Unmapped' : not_mapped, 'UnClade' : nic})
             #wholeres, whfound, nic = found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
-            if contamination and original_FASTA_file:
-                prot_clade = get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
-                store_contaminant_FASTA(stordir, basefile, prot_clade, original_FASTA_file)
+            if original_FASTA_file:
+                if contamination :
+                    prot_clade = get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
+                    store_contaminant_FASTA(stordir, basefile, prot_clade, original_FASTA_file)
+                store_incorrect_map_FASTA(stordir, basefile, not_mapped, nic, original_FASTA_file)
             res, found_cons, nicons = found_with_omamer(omamdata ,conshog, hog_tab, chog_buff)
 
             store_results(stordir+'/'+basefile+".omq", res) 
@@ -704,6 +706,7 @@ def store_results(storfile, results):
 			storage.write('>'+categ+'\n')
 			for elem in hoglist:
 				storage.write(elem+'\n')
+
 def store_summary(storfile, res_clade, results, found_cons, unmap, nicons, nic, contaminant = False, prot_clade = False):
     with open(storfile,'w') as storage:
         total = len(results['Found'])+len(results['Duplicated'])+ len(results['Overspecific']) + len(results['Underspecific']) + len(results['Lost'])
@@ -733,10 +736,36 @@ def store_contaminant_FASTA(stordir, basefile_name, prot_clade, original_FASTA_f
             with open(stordir+"/"+basefile_name+"_"+re.sub("[^0-9a-zA-Z]+", "_",key)+".fasta", "w") as out_handle:
                     Bio.SeqIO.write(seqs_from_cont, out_handle, 'fasta')           
 
+def store_incorrect_map_FASTA(stordir, basefile_name, not_mapped, incorrect_plac, original_FASTA_file):
+    seqs_by_id = dict()
+    with open(original_FASTA_file) as handle:
+        for record in Bio.SeqIO.parse(handle, "fasta"):
+            seqs_by_id[record.id] = record
+
+    seqs_not_map = list()
+    seqs_mapped = list()
+    seqs_misplaced = list()
+    for seqid, seq in seqs_by_id.items():
+        if seqid in not_mapped:
+            seqs_not_map.append(seq)
+        elif seqid in incorrect_plac:
+            seqs_misplaced.append(seq)
+        else: 
+            seqs_mapped.append(seq)
+  
+    with open(stordir+"/"+basefile_name+"_mapped.fasta", "w") as out_handle:
+        Bio.SeqIO.write(seqs_mapped, out_handle, 'fasta')    
+    with open(stordir+"/"+basefile_name+"_no_hits.fasta", "w") as out_handle:
+        Bio.SeqIO.write(seqs_not_map, out_handle, 'fasta')
+    with open(stordir+"/"+basefile_name+"_misplaced.fasta", "w") as out_handle:
+                Bio.SeqIO.write(seqs_misplaced, out_handle, 'fasta')   
+
+
 def store_close(storfile, close):
 	with open(storfile, 'w') as castor:
 		for taxid, num in close.items():
 			castor.write(str(taxid)+'\t'+str(num)+'\n')
+
 def store_close_level(storfile, data):
         with open(storfile ,'w') as castor:
                 castor.write('>Sampled\n')
