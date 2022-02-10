@@ -54,11 +54,11 @@ def parseOmamer(file):
         for line in f.readlines():
             data = dict()
             col = line.strip('\n').split('\t')
-            if col[1]=='na' or float(col[2])<0.8:
-                not_mapped.append(col[0])
-                continue
             for i in range(len(cat)) :
                 data[cat[i]] = col[i]
+            if data['hogid']=='na' or float(data['overlap'])<0.8:
+                not_mapped.append(col[0])
+                continue
             alldata.append(data)
     return alldata, not_mapped 
 
@@ -338,6 +338,19 @@ def get_species_from_taxon(taxname, tax_tab, sp_tab, tax_buff):
     sp_tax =[ tax_tab[x][0].decode() for x in sp_off_in_tax]
     return sp_tax
 
+#Could be more efficient. For now fetch multiple time children of Tax. See if need improvement
+#Return a dictionary of set of species by clade.
+def get_spec_by_tax(tax_tab, sp_tab, tax_buff):
+    i=0
+    spec_by_tax = dict()
+    for tax_entry in tax_tab:
+        taxname = tax_entry['ID']
+        sp_off_in_tax = omamer.hierarchy.get_leaves(i, tax_tab, tax_buff)
+        sp_tax =[ tax_tab[x][0].decode() for x in sp_off_in_tax]
+        spec_by_tax[taxname] = set(sp_tax)
+        i+=1
+    return spec_by_tax
+
 def get_species_from_omamer(hog, prot_tab, spe_tab, cprot_buff) :
     sp_list = list()
     chog_off = hog["ChildrenProtOff"]
@@ -383,7 +396,7 @@ def get_nb_hogs_by_clade(hog_tab, tax_tab):
 #Species placements
 
 #Get all lineages from which proteins come in the analyzed proteomes considering the HOGs where the placement was done.
-def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, chog_buff):
+def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff):
     cutoff_percentage = 0.01
     #Get taxa in which placement were made with the number of placement, couting individual HOGs only once
     all_tax = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff,  allow_hog_redun =False)
@@ -401,14 +414,15 @@ def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, chog_buff):
 
     #Create a tree with all target lineages and uses it to find likely taxa mixture
     t =tree_from_taxlist(filter_all_taxa_perc, tax_tab )
-    all_plac  = get_likely_spec(t,filter_all_taxa_perc)
+    tax_to_spec = get_spec_by_tax(tax_tab, sp_tab, tax_buff)
+    all_plac  = get_likely_spec_s2(t,filter_all_taxa_perc,tax_to_spec)
 
     return all_plac
 
 
 def tree_from_taxlist(all_taxa, tax_tab):
 
-    t = ete3.Tree()
+    t = ete3.Tree(name='LUCA')
     existing_node = list()
     curr_node = t
     #Creating the tree only using lineage present in OMAmer, need to get the full lineage for this
@@ -424,29 +438,75 @@ def tree_from_taxlist(all_taxa, tax_tab):
 
     return t
 
+#Rather than checking depth: check significant linearity to main branch + depth higher node. Maybe try with a new version
+#Return a list of tuple: (best ranking clade [allow for selection of lesser clade], maximum score, depth of the selected clade, continuity, depth of best_clade]?
+def get_likely_spec_s2(t, score, tax_to_spec):
+    cur_score = score.get(t.name.encode(),0)
+    cur_sp = tax_to_spec[t.name.encode()]
+    if t.is_leaf():
+        return [(t.name, cur_score,0)]
+    all_child = list()
+    for child in t.get_children():
+        all_child += get_likely_spec_s2(child,score, tax_to_spec)
+    max_score = 0
+    best_ranking = None
+    qualified = list()
+    contaminants =  list()
+    new_main = None
+    low_depth = True
+
+    for child in all_child:
+        if child[1] > max_score:
+
+            best_ranking = child
+            max_score = child[1]
+        child_sp = tax_to_spec[child[0].encode()]
+        if child[1]>cur_score*(len(child_sp)/len(cur_sp)) :
+
+            qualified.append(child)
+            if child[2]>1:
+                low_depth = False
+
+    
+    if len(qualified)==1 or (len(qualified)>1 and not low_depth):
+        for qual in qualified:
+            name = qual[0]
+            score = qual[1]
+            depth = qual[2]
+            if score==max_score:
+                new_main = (name, score,depth+1)
+            else:
+                contaminants.append((name, score,depth+1))
+    if not new_main:
+        #There is a case where there is no selected branch, but with some qualified clade. It means the branch
+        #with the most representation did not pass the threshold. In these case, we chose the current node: most general.
+        new_main = (t.name, cur_score, 0)
+        contaminants = list()
+    return [new_main] + contaminants
+
 #Recursive function tacking a tree of clade and the percentage of HOG found for each clade to find the most likely level represented in a proteome.
 #Return a list of clades, the first one being the main representative at a level, and the rest the possible contaminants.
 def get_likely_spec(t, score, depth_threshold = 2, score_factor = 2/3):
     cur_score = score.get(t.name.encode(),0)
     if t.is_leaf():
-        return [(t.name, cur_score,1)]
+        return [(t.name, cur_score,0)]
     all_child = list()
     for child in t.get_children():
         all_child += get_likely_spec(child,score)
     max_score = 0
     best_ranking = None
     contaminants =  list()
+    pot_contaminants = list()
 
     for child in all_child:
         if child[1] > max_score:
             if best_ranking:
                 #Have a measure of shallowness
-                if best_ranking[2]>depth_threshold:
-                    contaminants.append(best_ranking)
+                pot_contaminants.append(best_ranking)
             best_ranking = child
             max_score = child[1]
-        elif child[2]>depth_threshold:
-            contaminants.append(child)
+        else:
+            pot_contaminants.append(best_ranking)
     if max_score > cur_score*score_factor:
         best_score = cur_score
         if max_score > cur_score:
@@ -454,7 +514,11 @@ def get_likely_spec(t, score, depth_threshold = 2, score_factor = 2/3):
         new_main = (best_ranking[0], best_score,best_ranking[2]+1)
     else:
         new_main = (t.name, cur_score, 0)
-        contaminants = list()
+        pot_contaminants = list()
+    for cont in pot_contaminants:
+        cont = (cont[0], cont[1], cont[2]+1)
+        if cont[2]>depth_threshold :
+            contaminants.append(cont)
     return [new_main] + contaminants
 
 def get_prot_by_clades(all_plac, omamdata, hog_tab, tax_tab, tax_buff, chog_buff):
@@ -656,7 +720,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
             #print('Parse OMAmer')
             omamdata, not_mapped  = parseOmamer(omamerfile)
             #print('get Close')
-            placements = get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)      
+            placements = get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)      
 
             if taxid==None:
                 #close = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
