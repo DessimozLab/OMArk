@@ -415,7 +415,7 @@ def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff
     #Create a tree with all target lineages and uses it to find likely taxa mixture
     t =tree_from_taxlist(filter_all_taxa_perc, tax_tab )
     tax_to_spec = get_spec_by_tax(tax_tab, sp_tab, tax_buff)
-    all_plac  = get_likely_spec_s2(t,filter_all_taxa_perc,tax_to_spec)
+    all_plac  = get_likely_spec(t,filter_all_taxa_perc,tax_to_spec)
 
     return all_plac
 
@@ -440,14 +440,14 @@ def tree_from_taxlist(all_taxa, tax_tab):
 
 #Rather than checking depth: check significant linearity to main branch + depth higher node. Maybe try with a new version
 #Return a list of tuple: (best ranking clade [allow for selection of lesser clade], maximum score, depth of the selected clade, continuity, depth of best_clade]?
-def get_likely_spec_s2(t, score, tax_to_spec):
+def get_likely_spec(t, score, tax_to_spec):
     cur_score = score.get(t.name.encode(),0)
     cur_sp = tax_to_spec[t.name.encode()]
     if t.is_leaf():
         return [(t.name, cur_score,0)]
     all_child = list()
     for child in t.get_children():
-        all_child += get_likely_spec_s2(child,score, tax_to_spec)
+        all_child += get_likely_spec(child,score, tax_to_spec)
     max_score = 0
     best_ranking = None
     qualified = list()
@@ -482,43 +482,6 @@ def get_likely_spec_s2(t, score, tax_to_spec):
         #with the most representation did not pass the threshold. In these case, we chose the current node: most general.
         new_main = (t.name, cur_score, 0)
         contaminants = list()
-    return [new_main] + contaminants
-
-#Recursive function tacking a tree of clade and the percentage of HOG found for each clade to find the most likely level represented in a proteome.
-#Return a list of clades, the first one being the main representative at a level, and the rest the possible contaminants.
-def get_likely_spec(t, score, depth_threshold = 2, score_factor = 2/3):
-    cur_score = score.get(t.name.encode(),0)
-    if t.is_leaf():
-        return [(t.name, cur_score,0)]
-    all_child = list()
-    for child in t.get_children():
-        all_child += get_likely_spec(child,score)
-    max_score = 0
-    best_ranking = None
-    contaminants =  list()
-    pot_contaminants = list()
-
-    for child in all_child:
-        if child[1] > max_score:
-            if best_ranking:
-                #Have a measure of shallowness
-                pot_contaminants.append(best_ranking)
-            best_ranking = child
-            max_score = child[1]
-        else:
-            pot_contaminants.append(best_ranking)
-    if max_score > cur_score*score_factor:
-        best_score = cur_score
-        if max_score > cur_score:
-            best_score = max_score
-        new_main = (best_ranking[0], best_score,best_ranking[2]+1)
-    else:
-        new_main = (t.name, cur_score, 0)
-        pot_contaminants = list()
-    for cont in pot_contaminants:
-        cont = (cont[0], cont[1], cont[2]+1)
-        if cont[2]>depth_threshold :
-            contaminants.append(cont)
     return [new_main] + contaminants
 
 def get_prot_by_clades(all_plac, omamdata, hog_tab, tax_tab, tax_buff, chog_buff):
@@ -567,6 +530,19 @@ def compute_protein_breakdowm(all_plac,t, prot_by_taxa):
         
         prots_by_clade[clade] = all_prots
     return prots_by_clade
+
+def reorganized_placement(placements, prot_by_clade):
+    new_placements = list()
+    for clade in placements:
+        count = 0
+        clname = clade[0]
+        for levels in prot_by_clade[clname]:
+            count += len(levels[2])
+        #Drop depth because it does not matter here
+        new_placements.append((clname,clade[1],count))
+    new_placements.sort(key = lambda x: x[2], reverse=True)
+    return new_placements
+
 
 def print_results(res):
     print(len(res['Found']))
@@ -721,7 +697,8 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
             omamdata, not_mapped  = parseOmamer(omamerfile)
             #print('get Close')
             placements = get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)      
-
+            prot_clade = get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
+            placements = reorganized_placement(placements, prot_clade)
             if taxid==None:
                 #close = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
                 #print('Close taxa found')
@@ -754,7 +731,6 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
             #wholeres, whfound, nic = found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
             if original_FASTA_file:
                 if contamination :
-                    prot_clade = get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
                     store_contaminant_FASTA(stordir, basefile, prot_clade, original_FASTA_file)
                 store_incorrect_map_FASTA(stordir, basefile, not_mapped, nic, original_FASTA_file)
             res, found_cons, nicons = found_with_omamer(omamdata ,conshog, hog_tab, chog_buff)
@@ -781,8 +757,8 @@ def store_summary(storfile, res_clade, results, found_cons, unmap, nicons, nic, 
         if contaminant:
             storage.write('Detected species (Contaminants)\n')
             for values in contaminant:
-                storage.write('\t'.join([str(x) for x in values]))
-                storage.write('\t'+str(len(prot_clade[values[0]][0][2]))+'\n')
+                storage.write('\t'.join([str(x) for x in values])+'\n')
+                #storage.write('\t'+str(len(prot_clade[values[0]][0][2]))+'\n')
 def store_contaminant_FASTA(stordir, basefile_name, prot_clade, original_FASTA_file):
     seqs_by_id = dict()
     with open(original_FASTA_file) as handle:
