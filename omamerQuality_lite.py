@@ -56,7 +56,7 @@ def parseOmamer(file):
         firstline = f.readline()
         cat = firstline.strip('\n').split('\t')
         for line in f.readlines():
-            data = dict()
+            data = dict()   
             col = line.strip('\n').split('\t')
             for i in range(len(cat)) :
                 data[cat[i]] = col[i]
@@ -192,8 +192,6 @@ def get_full_lineage_omamer(taxname, tax_tab, tax_buff = False,  descendant = Fa
         print(tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'])
         lineage += tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'].tolist()
     return lineage
-    
-	
 
 
 def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, allow_hog_redun =True):
@@ -418,12 +416,15 @@ def get_nb_hogs_by_clade(hog_tab, tax_tab):
 
 #Get all lineages from which proteins come in the analyzed proteomes considering the HOGs where the placement was done.
 def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff):
-    cutoff_percentage = 0.01
+    #This cutoff is made to avoid some false positives. Count lineage only if more than 0.001 of its HOGs are represented
+    cutoff_percentage = 0.001
+    #Condider only taxa with more than 2 hits
+    cutoff_nb_prot = 2
+
     #Get taxa in which placement were made with the number of placement, couting individual HOGs only once
     all_tax = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff,  allow_hog_redun =False)
     
-    #Condider only taxa with more than 2 hits
-    filter_all_tax = {key: value for (key, value) in all_tax.items() if value > 1 }
+    filter_all_tax = {key: value for (key, value) in all_tax.items() if value > cutoff_nb_prot }
 
     #Consider only taxa in which at least one percent of the registered HOGs has a hit
     all_taxa_perc = dict()
@@ -474,7 +475,7 @@ def get_likely_spec(t, score, tax_to_spec):
     qualified = list()
     contaminants =  list()
     new_main = None
-    low_depth = True
+    low_depth = 0
 
     for child in all_child:
         if child[1] > max_score:
@@ -485,11 +486,11 @@ def get_likely_spec(t, score, tax_to_spec):
         if child[1]>cur_score*(len(child_sp)/len(cur_sp)) :
 
             qualified.append(child)
-            if child[2]>1:
-                low_depth = False
+            if child[2]<=1:
+                low_depth += 1
 
-    
-    if len(qualified)==1 or (len(qualified)>1 and not low_depth):
+    #If there is only one possibility, and there are no multiple possibilities at a low level directly below
+    if len(qualified)==1 or (len(qualified)>1 and low_depth <=1):
         for qual in qualified:
             name = qual[0]
             score = qual[1]
@@ -643,6 +644,25 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
     return found_hog, poss_hog
 
 
+
+def get_root_HOGs_descendants(lineage, tax_tab, hog_tab, fam_tab)
+
+    tax_off2tax = tax_tab['ID']
+    tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
+    descendants = tax_tab[omamer.hierarchy.get_descendants(tax2tax_off[lineage], tax_tab, tax_buff)]['ID']
+    desc_root_HOGs = list()
+    for f in fam_tab:
+        off = f['TaxOff']
+        sp = tax_tab[off]["ID"]
+        if sp in descendants:
+            print(sp)
+
+            hog = hog_tab[f['HOGoff']]
+            desc_root_HOGs.append(hog)
+    return desc_root_HOGs
+    
+
+
 def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
     all_subf = list()
     all_prot = list()    
@@ -758,8 +778,12 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
             store_close_level(stordir+'/'+basefile+".tax", {'Sampled': str(closest_corr.decode()),
                                                                                                         'Closest' : str(likely_clade.decode())})
             #Conshog : HOG with 80% representative of the target lineage
-            #Cladehog : HOG with at least 1 representative of the target libeage
+            #Cladehog : HOG with at least 1 representative of the target lineage present in the common ancestir
             conshog, cladehog = get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
+            lineage_rhog = get_root_HOGs_descendants(closest_corr, tax_tab, hog_tab, fam_tab)
+
+            cladehog = cladehog + lineage_rhog
+
             #Two modes? : Normal and listing unexpected protein mapping?
             if unmapped :
                 print('HOGs')
@@ -781,7 +805,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
 
             store_results(stordir+'/'+basefile+".omq", res_completeness) 
             store_summary(stordir+'/'+basefile+".sum",
-                            res_completeness, res_proteomes, placements, prot_clade)
+                            res_completeness, res_proteomes, closest_corr, placements, prot_clade)
 
 
 def store_results(storfile, results):
@@ -791,9 +815,9 @@ def store_results(storfile, results):
 			for elem in hoglist:
 				storage.write(elem+'\n')
 
-def store_summary(storfile, results, results_proteomes, contaminant = False, prot_clade = False):
+def store_summary(storfile, results, results_proteomes, selected_lineage, contaminant = False, prot_clade = False):
     with open(storfile,'w') as storage:
-        storage.write('#The clade used was ' +"\n")
+        storage.write('#The selected clade was '+selected_lineage.decode()+"\n")
         total = len(results['Single'])+len(results['Duplicated'])+ len(results['Overspecific_S']) + len(results['Overspecific_D'])+ len(results['Underspecific']) + len(results['Lost'])
         storage.write('#Number of conserved HOGs is: '+str(total)+'\n')
         tot_genes = len(results_proteomes['Not_Placed'])+len(results_proteomes['Correct'])+len(results_proteomes['Erroneous'])
@@ -803,7 +827,7 @@ def store_summary(storfile, results, results_proteomes, contaminant = False, pro
         storage.write(f'S:{100*(len(results["Single"])+len(results["Overspecific_S"])+len(results["Underspecific"]))/total:4.2f}%,D:{100*(len(results["Duplicated"])+len(results["Overspecific_D"]))/total:4.2f}%[U:{100*len(results["Duplicated"])/total:4.2f}%,E:{100*len(results["Overspecific_D"])/total:4.2f}%],M:{100*len(results["Lost"])/total:4.2f}%\n') 
         storage.write('#On the whole proteome, there is '+str(tot_genes)+' proteins\n')
         storage.write('#Of which:\n')
-        storage.write('#C:Placements in correct lineage[P:Partial hits,F:Fragmented],E: Erroneous placement[P:Partial hits,F:Fragmented],N: no mapping \n')
+        storage.write('#C:Placements in correct lineage[P:Partial hits,F:Fragmented],E: Erroneous placements[P:Partial hits,F:Fragmented],N: no mapping \n')
         storage.write(f'C:{len(results_proteomes["Correct"])}[P:{len(results_proteomes["Correct_Partial"])},F:{len(results_proteomes["Correct_Fragment"])}],E:{len(results_proteomes["Erroneous"])}[P:{len(results_proteomes["Erroneous_Partial"])},F:{len(results_proteomes["Erroneous_Fragment"])}],N:{len(results_proteomes["Not_Placed"])}\n') 
         storage.write(f'C:{100*len(results_proteomes["Correct"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Correct_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Correct_Fragment"])/tot_genes:4.2f}%],E:{100*len(results_proteomes["Erroneous"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Erroneous_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Erroneous_Fragment"])/tot_genes:4.2f}%],N:{100*len(results_proteomes["Not_Placed"])/tot_genes:4.2f}%\n') 
 
