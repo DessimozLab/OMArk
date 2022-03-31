@@ -645,7 +645,7 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
 
 
 
-def get_root_HOGs_descendants(lineage, tax_tab, hog_tab, fam_tab)
+def get_root_HOGs_descendants(lineage, tax_tab, hog_tab, fam_tab, tax_buff):
 
     tax_off2tax = tax_tab['ID']
     tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
@@ -780,7 +780,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
             #Conshog : HOG with 80% representative of the target lineage
             #Cladehog : HOG with at least 1 representative of the target lineage present in the common ancestir
             conshog, cladehog = get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
-            lineage_rhog = get_root_HOGs_descendants(closest_corr, tax_tab, hog_tab, fam_tab)
+            lineage_rhog = get_root_HOGs_descendants(closest_corr, tax_tab, hog_tab, fam_tab,tax_buff)
 
             cladehog = cladehog + lineage_rhog
 
