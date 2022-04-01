@@ -412,11 +412,45 @@ def get_nb_hogs_by_clade(hog_tab, tax_tab):
         hog_by_tax[tax]+=1
     return hog_by_tax
 
+def get_prop_duplicated(hog_tab, tax_tab, chog_buff):
+    transition = dict()
+    hog_by_tax = dict()
+    for hog_off in range(hog_tab.size):
+        t = hog_tab[hog_off]
+        taxoff = hog_tab[hog_off]['TaxOff']
+        tax = tax_tab[taxoff]["ID"]
+        if tax not in hog_by_tax:
+            hog_by_tax[tax]=0
+        descendants = get_descendant_HOGs(t, hog_tab, chog_buff)
+        if len(descendants)>0:
+            if tax not in transition:
+                transition[tax] = dict()
+            seen_sp = list()        
+            for desc in descendants:
+                
+                taxd_off = desc['TaxOff']
+                tax_d = tax_tab[taxd_off]['ID']
+                if tax_d not in transition[tax]:
+                    transition[tax][tax_d] = 0
+                if not tax_d in seen_sp:
+                    transition[tax][tax_d] += 1
+                    seen_sp.append(tax_d)
+        hog_by_tax[tax]+=1
+
+    prop_duplicated = dict()
+    for x in transition:
+        tot = hog_by_tax[x]
+        if x not in prop_duplicated:
+            prop_duplicated[x] = dict()
+        for desc in transition[x]:
+            prop_duplicated[x][desc] = transition[x][desc]/hog_by_tax[x]
+    return prop_duplicated
+
 #Species placements
 
 #Get all lineages from which proteins come in the analyzed proteomes considering the HOGs where the placement was done.
 def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff):
-    #This cutoff is made to avoid some false positives. Count lineage only if more than 0.001 of its HOGs are represented
+        #This cutoff is made to avoid some false positives. Count lineage only if more than 0.001 of its HOGs are represented
     cutoff_percentage = 0.001
     #Condider only taxa with more than 2 hits
     cutoff_nb_prot = 2
@@ -429,15 +463,16 @@ def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff
     #Consider only taxa in which at least one percent of the registered HOGs has a hit
     all_taxa_perc = dict()
     hog_by_tax = get_nb_hogs_by_clade(hog_tab, tax_tab)
+    proportion_hog_dup = get_prop_duplicated(hog_tab, tax_tab, chog_buff)
     for k, v in filter_all_tax.items():
         all_taxa_perc[k] = float(v)/float(hog_by_tax[k])
     all_taxa_perc = {k: v for k, v in sorted(all_taxa_perc.items(), key=lambda item: item[1], reverse=True)}
-    filter_all_taxa_perc = {key: value for (key, value) in all_taxa_perc.items() if value > cutoff_percentage }
+    filter_all_taxa_perc = {key: value for (key, value) in all_taxa_perc.items() if value >  cutoff_percentage}
 
     #Create a tree with all target lineages and uses it to find likely taxa mixture
     t =tree_from_taxlist(filter_all_taxa_perc, tax_tab )
     tax_to_spec = get_spec_by_tax(tax_tab, sp_tab, tax_buff)
-    all_plac  = get_likely_spec(t,filter_all_taxa_perc,tax_to_spec)
+    all_plac  = get_likely_spec(t,filter_all_taxa_perc,filter_all_tax, tax_to_spec, proportion_hog_dup)
 
     return all_plac
 
@@ -462,14 +497,15 @@ def tree_from_taxlist(all_taxa, tax_tab):
 
 #Rather than checking depth: check significant linearity to main branch + depth higher node. Maybe try with a new version
 #Return a list of tuple: (best ranking clade [allow for selection of lesser clade], maximum score, depth of the selected clade, continuity, depth of best_clade]?
-def get_likely_spec(t, score, tax_to_spec):
+def get_likely_spec(t, score, numb, tax_to_spec, prop_inherited):
     cur_score = score.get(t.name.encode(),0)
+    cur_numb = numb.get(t.name.encode(),0)
     cur_sp = tax_to_spec[t.name.encode()]
     if t.is_leaf():
-        return [(t.name, cur_score,0)]
+        return [(t.name, cur_score, cur_numb,0)]
     all_child = list()
     for child in t.get_children():
-        all_child += get_likely_spec(child,score, tax_to_spec)
+        all_child += get_likely_spec(child, score, numb, tax_to_spec, prop_inherited)
     max_score = 0
     best_ranking = None
     qualified = list()
@@ -478,31 +514,33 @@ def get_likely_spec(t, score, tax_to_spec):
     low_depth = 0
 
     for child in all_child:
-        if child[1] > max_score:
+        if child[1] >max_score:
 
             best_ranking = child
             max_score = child[1]
         child_sp = tax_to_spec[child[0].encode()]
-        if child[1]>cur_score*(len(child_sp)/len(cur_sp)) :
-
+        if child[2]>cur_numb*(prop_inherited[t.name.encode()].get(child[0].encode(),0)) and child[1]>cur_score*(len(child_sp)/len(cur_sp))  :
             qualified.append(child)
-            if child[2]<=1:
+            if child[3]<=1:
                 low_depth += 1
 
     #If there is only one possibility, and there are no multiple possibilities at a low level directly below
     if len(qualified)==1 or (len(qualified)>1 and low_depth <=1):
+        
         for qual in qualified:
-            name = qual[0]
-            score = qual[1]
-            depth = qual[2]
-            if score==max_score:
-                new_main = (name, score,depth+1)
+            qname = qual[0]
+            qscore = qual[1]
+            qnumb = qual[2]
+            
+            qdepth = qual[3]
+            if qscore==max_score:
+                new_main = (qname, qscore, qnumb,qdepth+1)
             else:
-                contaminants.append((name, score,depth+1))
+                contaminants.append((qname, qscore, qnumb,qdepth+1))
     if not new_main:
         #There is a case where there is no selected branch, but with some qualified clade. It means the branch
         #with the most representation did not pass the threshold. In these case, we chose the current node: most general.
-        new_main = (t.name, cur_score, 0)
+        new_main = (t.name, cur_score, cur_numb, 0)
         contaminants = list()
     return [new_main] + contaminants
 
