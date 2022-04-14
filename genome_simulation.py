@@ -16,6 +16,7 @@ def build_arg_parser():
     parser = argparse.ArgumentParser(description="Generate simulated proteomes from an input directory of proteomes.")   
     parser.add_argument('-i', '--input', help="The directory with input genomes." )	
     parser.add_argument('-o', '--output', help="The directory with output genomes.")
+    parser.add_argument('-c', '--contamnants', help="The directory with input proteomes." )
     parser.add_argument('-r', '--reuse', action="store_true", help="Sign to use the minimalized files to generate whole genomes.")
     return parser
 
@@ -61,7 +62,7 @@ def generate_random_prot( id_num, limit_sequence_size=20):
 	record = SeqRecord(sequence, id='RandProt_'+str(id_num))
 	return record
 
-def generate_simulations(indir, outdir, reuse=False):
+def generate_simulations(indir, outdir, contdir, reuse=False):
 	contamination_numbers = [10,20,50,100,200,500,1000]
 	completeness_proportions = [0.1,.2,.3,.4,.5,.6,.7,.8,.9]
 	added_bits_proportions =   [0.1,.2,.3,.4,.5,.6,.7,.8,.9]
@@ -70,6 +71,7 @@ def generate_simulations(indir, outdir, reuse=False):
 	if not os.path.isdir(os.path.join(outdir,'Storage')):
 		os.mkdir(os.path.join(outdir,'Storage'))
 	files = list(os.listdir(indir))
+	cont_files = list(os.listdir(contdir))
 
 	for file in files:
 		path = os.path.join(indir,file)
@@ -99,8 +101,8 @@ def generate_simulations(indir, outdir, reuse=False):
 				write_proteome(spath, false_seq)
 
 			write_proteome(opath, erronoeous_proteome)
-		for other_file in files:
-			cpath = os.path.join(indir, other_file)
+		for other_file in cont_files:
+			cpath = os.path.join(contdir, other_file)
 			contaminant_proteome = load_proteome(cpath)
 			for n in contamination_numbers:
 				
@@ -121,7 +123,8 @@ if __name__=='__main__':
 	arg = parser.parse_args()
 	input_folder = arg.input
 	output_folder = arg.output
+	cont_folder = arg.contamnants
 	reuse  = arg.reuse
-	generate_simulations(input_folder, output_folder, reuse)
+	generate_simulations(input_folder, output_folder, cont_folder, reuse)
 
 
