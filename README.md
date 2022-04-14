@@ -5,13 +5,14 @@ OMArk rely on the OMA orthology database, from which it exploits orthology relat
 
 ## Installation
 
-You can install OMArk by cloning this repertory and installing manually.
+You can install OMArk by cloning this repository and installing manually.
+All dependancies can be installed in a conda environment, using the omark\_env.yml file.
 
 ##Usage
 
 Required arguments: ``-f (--file)``, ``-d (--database)``, ``-o (--output)`` 
 
-    usage : omark [-h] [-f FILE] [-d DATABASE] [-o OUTPUTFOLDER] [-t TAXID] [-of OG_FASTA]
+    usage :python omark.py [-h] [-f FILE] [-d DATABASE] [-o OUTPUTFOLDER] [-t TAXID] [-of OG_FASTA]
 
 ## Arguments
 | Flag                 | Default                | Description |
