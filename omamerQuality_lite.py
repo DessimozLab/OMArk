@@ -151,7 +151,7 @@ def getCloseTaxa(omamerdata, dbpath, tax=None):
         seen = list()
         for i in suby:
             if i.hog_id==omamapping['subfamily']:
-                print(i.level)
+                #print(i.level)
                 if i.level not in seen:
                     seen.append(i.level)
                 if i.level in alltaxa:
@@ -160,7 +160,7 @@ def getCloseTaxa(omamerdata, dbpath, tax=None):
                     alltaxa[i.level]=1
                 if tax:
                     if i.level not in descendant:
-                        print([x.level for x in suby])
+                        #print([x.level for x in suby])
                         continue
                     descendant.remove(i.level)
         if tax:
@@ -188,8 +188,8 @@ def get_full_lineage_omamer(taxname, tax_tab, tax_buff = False,  descendant = Fa
         else:
                 reached = True
     if descendant :
-        print(lineage)
-        print(tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'])
+        #print(lineage)
+        #print(tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'])
         lineage += tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'].tolist()
     return lineage
 
@@ -344,10 +344,7 @@ def getLineage(taxid, tax_tab, sp_tabm, tax_buff):
 
 
 
-def get_species_from_taxid(taxid, tax_tab, sp_tab, tax_bugg):
-	i=-1
-	for taxi in tax_tab:
-		print(tax_tab)
+
 
 def get_species_from_taxon(taxname, tax_tab, sp_tab, tax_buff):
     tax_off2tax = tax_tab['ID'] 
@@ -519,7 +516,7 @@ def get_likely_spec(t, score, numb, tax_to_spec, prop_inherited):
             best_ranking = child
             max_score = child[1]
         child_sp = tax_to_spec[child[0].encode()]
-        if child[2]>cur_numb*(prop_inherited[t.name.encode()].get(child[0].encode(),0)) and child[1]>cur_score*(len(child_sp)/len(cur_sp))  :
+        if child[2]>cur_numb*(prop_inherited.get(t.name.encode(), dict()).get(child[0].encode(),0)) and child[1]>cur_score*(len(child_sp)/len(cur_sp))  :
             qualified.append(child)
             if child[3]<=1:
                 low_depth += 1
@@ -550,7 +547,14 @@ def get_prot_by_clades(all_plac, omamdata, hog_tab, tax_tab, tax_buff, chog_buff
     prot_clade = compute_protein_breakdowm(all_plac, t_complete, prot_by_tax)
     return prot_clade
 
-
+def get_contaminant_proteins(placements, prot_by_clade):
+    all_contaminants = list()
+    for x in placements[1:]:
+        spec = x[0]
+        for level  in prot_by_clade[spec]:
+            proteins_id = [x[1] for x in level[2]]
+            all_contaminants += proteins_id
+    return all_contaminants
 
 def compute_protein_breakdowm(all_plac,t, prot_by_taxa):
     prots_by_clade = dict()
@@ -604,16 +608,21 @@ def reorganized_placement(placements, prot_by_clade):
     return new_placements
 
 #Reorder informations from different treatment into a single cohesive results for stats about the set of protein coding genes
-def score_whole_proteome(found_clade, not_in_clade, partials, fragments, not_mapped):
+def score_whole_proteome(found_clade, not_in_clade, partials, fragments, not_mapped, contaminants):
 
     proteome_res = dict()
 
     proteome_res['Correct'] = found_clade
-    proteome_res['Erroneous'] = not_in_clade
+    confirmed_contaminants = set(not_in_clade).intersection(set(contaminants))
+    proteome_res['Contamination'] = confirmed_contaminants
+    misplaced = set(not_in_clade) - set(confirmed_contaminants)
+    proteome_res['Erroneous'] = misplaced
     proteome_res['Correct_Partial'] = set(found_clade).intersection(set(partials))
     proteome_res['Correct_Fragment'] =set(found_clade).intersection(set(fragments))
-    proteome_res['Erroneous_Partial'] = set(not_in_clade).intersection(set(partials))
-    proteome_res['Erroneous_Fragment'] =set(not_in_clade).intersection(set(fragments))
+    proteome_res['Erroneous_Partial'] = set(misplaced).intersection(set(partials))
+    proteome_res['Erroneous_Fragment'] =set(misplaced).intersection(set(fragments))
+    proteome_res['Contamination_Partial'] = set(confirmed_contaminants).intersection(set(partials))
+    proteome_res['Contamination_Fragment'] =set(confirmed_contaminants).intersection(set(fragments))
     proteome_res['Not_Placed'] = not_mapped
     return proteome_res
 
@@ -693,8 +702,6 @@ def get_root_HOGs_descendants(lineage, tax_tab, hog_tab, fam_tab, tax_buff):
         off = f['TaxOff']
         sp = tax_tab[off]["ID"]
         if sp in descendants:
-            print(sp)
-
             hog = hog_tab[f['HOGoff']]
             desc_root_HOGs.append(hog)
     return desc_root_HOGs
@@ -798,6 +805,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
             placements = get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)      
             #Get the proteins placed in species correspoding to each placement in a dictionary
             prot_clade = get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
+            contaminant_prots = get_contaminant_proteins(placements, prot_clade)
             #Reorganize the placements to consider the species with most proteins to be the main one. (Needed in edge cases where the proteins of the contaminant
             #is an exhaustive set)
             placements = reorganized_placement(placements, prot_clade)
@@ -839,7 +847,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
                 store_incorrect_map_FASTA(stordir, basefile, not_mapped, nic, original_FASTA_file)
             res_completeness, found_cons, nicons = found_with_omamer(omamdata ,conshog, hog_tab, chog_buff)
 
-            res_proteomes = score_whole_proteome(found_clade, nic, partials, fragments, not_mapped)
+            res_proteomes = score_whole_proteome(found_clade, nic, partials, fragments, not_mapped, contaminant_prots)
 
             store_results(stordir+'/'+basefile+".omq", res_completeness) 
             store_summary(stordir+'/'+basefile+".sum",
@@ -865,10 +873,9 @@ def store_summary(storfile, results, results_proteomes, selected_lineage, contam
         storage.write(f'S:{100*(len(results["Single"])+len(results["Overspecific_S"])+len(results["Underspecific"]))/total:4.2f}%,D:{100*(len(results["Duplicated"])+len(results["Overspecific_D"]))/total:4.2f}%[U:{100*len(results["Duplicated"])/total:4.2f}%,E:{100*len(results["Overspecific_D"])/total:4.2f}%],M:{100*len(results["Lost"])/total:4.2f}%\n') 
         storage.write('#On the whole proteome, there is '+str(tot_genes)+' proteins\n')
         storage.write('#Of which:\n')
-        storage.write('#C:Placements in correct lineage[P:Partial hits,F:Fragmented],E: Erroneous placements[P:Partial hits,F:Fragmented],N: no mapping \n')
-        storage.write(f'C:{len(results_proteomes["Correct"])}[P:{len(results_proteomes["Correct_Partial"])},F:{len(results_proteomes["Correct_Fragment"])}],E:{len(results_proteomes["Erroneous"])}[P:{len(results_proteomes["Erroneous_Partial"])},F:{len(results_proteomes["Erroneous_Fragment"])}],N:{len(results_proteomes["Not_Placed"])}\n') 
-        storage.write(f'C:{100*len(results_proteomes["Correct"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Correct_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Correct_Fragment"])/tot_genes:4.2f}%],E:{100*len(results_proteomes["Erroneous"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Erroneous_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Erroneous_Fragment"])/tot_genes:4.2f}%],N:{100*len(results_proteomes["Not_Placed"])/tot_genes:4.2f}%\n') 
-
+        storage.write('#A:Placements in accurate lineage[P:Partial hits,F:Fragmented], E: Erroneous placements[P:Partial hits,F:Fragmented], C: Likely contamination[P:Partial hits,F:Fragmented], N: no mapping \n')
+        storage.write(f'A:{len(results_proteomes["Correct"])}[P:{len(results_proteomes["Correct_Partial"])},F:{len(results_proteomes["Correct_Fragment"])}],E:{len(results_proteomes["Erroneous"])}[P:{len(results_proteomes["Erroneous_Partial"])},F:{len(results_proteomes["Erroneous_Fragment"])}],C:{len(results_proteomes["Contamination"])}[P:{len(results_proteomes["Contamination_Partial"])},F:{len(results_proteomes["Contamination_Fragment"])}],N:{len(results_proteomes["Not_Placed"])}\n')
+        storage.write(f'A:{100*len(results_proteomes["Correct"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Correct_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Correct_Fragment"])/tot_genes:4.2f}%],E:{100*len(results_proteomes["Erroneous"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Erroneous_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Erroneous_Fragment"])/tot_genes:4.2f}%],C:{100*len(results_proteomes["Contamination"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Contamination_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Contamination_Fragment"])/tot_genes:4.2f}%],N:{100*len(results_proteomes["Not_Placed"])/tot_genes:4.2f}%\n')
         #storage.write(f'C:{100*len(found_cons)/tot_genes:4.2f}%,L:{100*(len(nicons)-len(nic))/tot_genes:4.2f}%,O:{100*len(nic)/tot_genes:4.2f}%,U:{100*len(unmap)/tot_genes:4.2f}%\n')
         if contaminant:
             storage.write('#From HOG placement, the detected species are:\n')
