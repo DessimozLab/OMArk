@@ -5,8 +5,12 @@ OMArk rely on the OMA orthology database, from which it exploits orthology relat
 
 ## Installation
 
-You can install OMArk by cloning this repository and installing manually.
+You can use  OMArk by cloning this repository.
 All dependancies can be installed in a conda environment, using the omark\_env.yml file.
+
+OMArk rely on an OMAmer database to run. For all OMArk features to work correctly, it is better for this database to cover a wide range of species.
+We recommend using one constructed from the whole OMA database. You can download one manually on this link : [DOI]([![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6462027.svg)](https://doi.org/10.5281/zenodo.6462027) 
+File :  OMAmerDB.tar.gz
 
 ##Usage
 
@@ -41,3 +45,15 @@ The file with the .omq extension recapitules the HOGs identifier used in the com
 
 The file with the .ump extensions recapitules the identifier for all proteins that were not mapped in OMAmer.
 
+##Example
+
+You can run OMArk on an example files stored on the example\_data folder. Remember to download a OMAmer databse as indicated in the installation section.
+
+First: you can run OMAmer on the proteome FASTA. (For more documentation about installing OMAmer: see its [Github](https://raw.githubusercontent.com/DessimozLab/omamer)
+This step should take less than 15 minutes.
+
+	omamer search --db  LUCA.h5 --query example_data/UP000005640_9606.fasta  --score sensitive --out example_data/UP000005640_9606.omamer
+
+Then, use OMArk (Should take less than 10 minutes):
+	python omark/omark.py -f example_data/UP000005640_9606.omamer -d LUCA.h5 -o example_data/omark_output 
+You can now explore OMArk results in the omark\_output folder
