@@ -23,7 +23,7 @@ else:
 import omamer
 import omamer.database
 from omamer.hierarchy import get_descendants, get_leaves, get_root_leaf_offsets , get_children
-from . import omamer_species_placement as osp
+import omamer_species_placement as osp
 #import taxonomic_placement as tp
 
 
