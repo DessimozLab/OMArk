@@ -1,30 +1,12 @@
-import pyoma.browser.db
 import argparse
 import os
-import sys
-import time
-#import pyoma
-#import pyham
-import inspect
-import urllib 
-import sys
-import gzip
-import Bio
 import ete3
-import re
 import numpy as np
-from tqdm import tqdm
-import pickle
-import pandas
-if sys.version_info[0] == 3:
-    from urllib.request import urlretrieve
-else:
-    from urllib import urlretrieve
 import omamer
 import omamer.database
 from omamer.hierarchy import get_descendants, get_leaves, get_root_leaf_offsets , get_children
 import omamer_species_placement as osp
-#import taxonomic_placement as tp
+import files as io
 
 
 def build_arg_parser():
@@ -41,30 +23,6 @@ def build_arg_parser():
     parser.add_argument('-t', '--taxid', help='Taxonomic identifier', default=None)
     parser.add_argument('-of', '--og_fasta', help='Original FASTA file', default=None)
     return parser
-
-
-
-#This function read an OMAmer file (input_) and output two variables:
-#alldata -> A list of all OMAmer placement, containing a dictionary correspoding to all of the OMAmer data results
-#not_mapped -> A listt of proteins that do not map to any HOGs (no homologs)
-def parseOmamer(file):
-    alldata = list()
-    not_mapped = list()
-
-    with open(file) as f:
-        
-        firstline = f.readline()
-        cat = firstline.strip('\n').split('\t')
-        for line in f.readlines():
-            data = dict()   
-            col = line.strip('\n').split('\t')
-            for i in range(len(cat)) :
-                data[cat[i]] = col[i]
-            if data['hogid']=='na':
-                not_mapped.append(col[0])
-                continue
-            alldata.append(data)
-    return alldata, not_mapped 
 
 #This function remove sequences that only match partially to HOGs of interests,
 #in order to consider only the most robust placement.
@@ -126,6 +84,8 @@ def get_hog2taxa(hog_tab, sp_tab, prot_tab, cprot_buff, tax_tab, chog_buff):
         hog_taxa_buff.extend(taxa)
     return np.array(hog_taxa_idx, dtype=np.int64), np.array(hog_taxa_buff, dtype=np.int16)
 
+
+#Deprecated
 def getCloseTaxa(omamerdata, dbpath, tax=None):
     dbObj = pyoma.browser.db.Database(dbpath)
     alltaxa = dict()
@@ -268,6 +228,7 @@ def get_HOGs_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, all
 
     return alltaxa, tax_HOGs
 
+#Deprecated
 def get_lineage_comp(alltaxa, clade, tax_tab, tax_buff):
     lineage = get_full_lineage_omamer(clade.encode('ascii'), tax_tab, tax_buff, True)
     compatible = 0
@@ -279,7 +240,7 @@ def get_lineage_comp(alltaxa, clade, tax_tab, tax_buff):
             non_comp+=v
     return compatible, non_comp
 
-
+#Deprecated
 def get_lower_noncontradicting(alltaxa, tax_tab):
     current_lower_name = None
     current_lower_lineage = None
@@ -297,6 +258,7 @@ def get_lower_noncontradicting(alltaxa, tax_tab):
                else:
                        return current_lower_name
     return current_lower_name
+
 
 def get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff):
     '''
@@ -336,15 +298,12 @@ def find_taxa_from_ncbi(lineage, tax_tab, sp_tab, tax_buff):
                         return tax.encode('ascii')
         return None
 
+#Deprecated
 def getLineage(taxid, tax_tab, sp_tabm, tax_buff):
 	ncbi = ete3.NCBITaxa()
 	name = ncbi.get_taxid_translator(taxid)
 	sp_tax = get_species_from_taxon(name, tax_tab, sp_tab, tax_buff)
 	
-
-
-
-
 
 def get_species_from_taxon(taxname, tax_tab, sp_tab, tax_buff):
     tax_off2tax = tax_tab['ID'] 
@@ -626,6 +585,7 @@ def score_whole_proteome(found_clade, not_in_clade, partials, fragments, not_map
     proteome_res['Not_Placed'] = not_mapped
     return proteome_res
 
+#Deprecated
 def print_results(res):
     print(len(res['Found']))
     print(len(res['Lost']))
@@ -777,7 +737,7 @@ def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
     not_in_clade = list(set(all_prot).difference(set(found)))    
     return results, found, not_in_clade
 
-def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, contamination= True, original_FASTA_file = None, force = True):
+def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True):
 
     db = omamer.database.Database(dbpath)
     #Variables
@@ -798,7 +758,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
         basefile = '.'.join(omamerfile.split('/')[-1].split('.')[:-1])
         if force or not os.path.isfile(stordir+'/'+basefile+".omq"): 
             #Extract OMAmer data
-            omamdata, not_mapped  = parseOmamer(omamerfile)
+            omamdata, not_mapped  = io.parseOmamer(omamerfile)
             #Get only full match for placement
             full_match_data, partials, fragments = filter_partial_matches(omamdata)
             #Determine species and contamination
@@ -820,9 +780,6 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
                 likely_clade = find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
             #Get the first parent of the chosen clade with at least 5 species
             closest_corr = osp.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff)
-            #Store the taxonomic choices
-            store_close_level(stordir+'/'+basefile+".tax", {'Sampled': str(closest_corr.decode()),
-                                                                                                        'Closest' : str(likely_clade.decode())})
             #Conshog : HOG with 80% representative of the target lineage
             #Cladehog : HOG with at least 1 representative of the target lineage present in the common ancestir
             conshog, cladehog = get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
@@ -831,121 +788,32 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, unmapped=True, co
             cladehog = cladehog + lineage_rhog
 
             #Two modes? : Normal and listing unexpected protein mapping?
-            if unmapped :
-                print('HOGs')
-                print(len(cladehog))
-                wholeres, found_clade, nic = found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
-                print('Unmapped')
-                print(len(not_mapped))
-                print('Not mapped to clade')				
-                print(len(nic))
-                store_results(stordir+'/'+basefile+".ump", {'Unmapped' : not_mapped, 'UnClade' : nic})
+
+            wholeres, found_clade, nic = found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
+
             #wholeres, whfound, nic = found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
-            if original_FASTA_file:
-                if contamination :
-                    store_contaminant_FASTA(stordir, basefile, prot_clade, original_FASTA_file)
-                store_incorrect_map_FASTA(stordir, basefile, not_mapped, nic, original_FASTA_file)
+           
             res_completeness, found_cons, nicons = found_with_omamer(omamdata ,conshog, hog_tab, chog_buff)
 
             res_proteomes = score_whole_proteome(found_clade, nic, partials, fragments, not_mapped, contaminant_prots)
 
-            store_results(stordir+'/'+basefile+".omq", res_completeness) 
-            store_summary(stordir+'/'+basefile+".sum",
+
+            #Store the taxonomic choices
+            io.store_close_level(stordir+'/'+basefile+".tax", {'Sampled': str(closest_corr.decode()),
+                                                                                'Closest' : str(likely_clade.decode())})
+
+            #Write optionnal taxa files
+            if original_FASTA_file:
+                if contamination :
+                    io.store_contaminant_FASTA(stordir, basefile, prot_clade, original_FASTA_file)
+                io.store_incorrect_map_FASTA(stordir, basefile, not_mapped, nic, original_FASTA_file)
+            #Write results files
+            io.store_results(stordir+'/'+basefile+".ump", {'Unmapped' : not_mapped, 'UnClade' : nic})
+            io.store_results(stordir+'/'+basefile+".omq", res_completeness) 
+            io.store_summary(stordir+'/'+basefile+".sum",
                             res_completeness, res_proteomes, closest_corr, placements, prot_clade)
 
 
-def store_results(storfile, results):
-	with open(storfile, 'w') as storage:
-		for categ, hoglist in results.items():
-			storage.write('>'+categ+'\n')
-			for elem in hoglist:
-				storage.write(elem+'\n')
-
-def store_summary(storfile, results, results_proteomes, selected_lineage, contaminant = False, prot_clade = False):
-    with open(storfile,'w') as storage:
-        storage.write('#The selected clade was '+selected_lineage.decode()+"\n")
-        total = len(results['Single'])+len(results['Duplicated'])+ len(results['Overspecific_S']) + len(results['Overspecific_D'])+ len(results['Underspecific']) + len(results['Lost'])
-        storage.write('#Number of conserved HOGs is: '+str(total)+'\n')
-        tot_genes = len(results_proteomes['Not_Placed'])+len(results_proteomes['Correct'])+len(results_proteomes['Erroneous'])
-        storage.write('#Results on conserved HOGs is:\n')
-        storage.write('#S:Single:S, D:Duplicated[U:Unexpected,E:Expected],M:Missing\n')
-        storage.write(f'S:{len(results["Single"])+len(results["Overspecific_S"])+len(results["Underspecific"])},D:{len(results["Duplicated"])+len(results["Overspecific_D"])}[U:{len(results["Duplicated"])},E:{len(results["Overspecific_D"])}],M:{len(results["Lost"])}\n') 
-        storage.write(f'S:{100*(len(results["Single"])+len(results["Overspecific_S"])+len(results["Underspecific"]))/total:4.2f}%,D:{100*(len(results["Duplicated"])+len(results["Overspecific_D"]))/total:4.2f}%[U:{100*len(results["Duplicated"])/total:4.2f}%,E:{100*len(results["Overspecific_D"])/total:4.2f}%],M:{100*len(results["Lost"])/total:4.2f}%\n') 
-        storage.write('#On the whole proteome, there is '+str(tot_genes)+' proteins\n')
-        storage.write('#Of which:\n')
-        storage.write('#A:Placements in accurate lineage[P:Partial hits,F:Fragmented], E: Erroneous placements[P:Partial hits,F:Fragmented], C: Likely contamination[P:Partial hits,F:Fragmented], N: no mapping \n')
-        storage.write(f'A:{len(results_proteomes["Correct"])}[P:{len(results_proteomes["Correct_Partial"])},F:{len(results_proteomes["Correct_Fragment"])}],E:{len(results_proteomes["Erroneous"])}[P:{len(results_proteomes["Erroneous_Partial"])},F:{len(results_proteomes["Erroneous_Fragment"])}],C:{len(results_proteomes["Contamination"])}[P:{len(results_proteomes["Contamination_Partial"])},F:{len(results_proteomes["Contamination_Fragment"])}],N:{len(results_proteomes["Not_Placed"])}\n')
-        storage.write(f'A:{100*len(results_proteomes["Correct"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Correct_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Correct_Fragment"])/tot_genes:4.2f}%],E:{100*len(results_proteomes["Erroneous"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Erroneous_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Erroneous_Fragment"])/tot_genes:4.2f}%],C:{100*len(results_proteomes["Contamination"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Contamination_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Contamination_Fragment"])/tot_genes:4.2f}%],N:{100*len(results_proteomes["Not_Placed"])/tot_genes:4.2f}%\n')
-        #storage.write(f'C:{100*len(found_cons)/tot_genes:4.2f}%,L:{100*(len(nicons)-len(nic))/tot_genes:4.2f}%,O:{100*len(nic)/tot_genes:4.2f}%,U:{100*len(unmap)/tot_genes:4.2f}%\n')
-        if contaminant:
-            storage.write('#From HOG placement, the detected species are:\n')
-            storage.write("#Clade\tPercentage of clade's HOGs\tNumber of associated proteins\n")
-
-            count=0
-            for values in contaminant:
-                if count==1:
-                    storage.write('#Including possible contaminant:\n')
-                storage.write('\t'.join([str(x) for x in values])+'\n')
-                count+=1
-                #storage.write('\t'+str(len(prot_clade[values[0]][0][2]))+'\n')
-
-def store_contaminant_FASTA(stordir, basefile_name, prot_clade, original_FASTA_file):
-    seqs_by_id = dict()
-    with open(original_FASTA_file) as handle:
-        for record in Bio.SeqIO.parse(handle, "fasta"):
-            seqs_by_id[record.id] = record
-    for key, value in prot_clade.items():
-        seqs_from_cont = list()
-        for level_data in value:
-            level = level_data[0]
-            clade = level_data[1]
-            for prot_data in level_data[2]:
-                    seq = seqs_by_id[prot_data[1]]
-                    seq.description = seq.description +" Level="+str(level)+" ["+clade+"]"
-                    seqs_from_cont.append(seq)
-            with open(stordir+"/"+basefile_name+"_"+re.sub("[^0-9a-zA-Z]+", "_",key)+".fasta", "w") as out_handle:
-                    Bio.SeqIO.write(seqs_from_cont, out_handle, 'fasta')           
-
-def store_incorrect_map_FASTA(stordir, basefile_name, not_mapped, incorrect_plac, original_FASTA_file):
-    seqs_by_id = dict()
-    with open(original_FASTA_file) as handle:
-        for record in Bio.SeqIO.parse(handle, "fasta"):
-            seqs_by_id[record.id] = record
-
-    seqs_not_map = list()
-    seqs_mapped = list()
-    seqs_misplaced = list()
-    for seqid, seq in seqs_by_id.items():
-        if seqid in not_mapped:
-            seqs_not_map.append(seq)
-        elif seqid in incorrect_plac:
-            seqs_misplaced.append(seq)
-        else: 
-            seqs_mapped.append(seq)
-  
-    with open(stordir+"/"+basefile_name+"_mapped.fasta", "w") as out_handle:
-        Bio.SeqIO.write(seqs_mapped, out_handle, 'fasta')    
-    with open(stordir+"/"+basefile_name+"_no_hits.fasta", "w") as out_handle:
-        Bio.SeqIO.write(seqs_not_map, out_handle, 'fasta')
-    with open(stordir+"/"+basefile_name+"_misplaced.fasta", "w") as out_handle:
-                Bio.SeqIO.write(seqs_misplaced, out_handle, 'fasta')   
-
-
-def store_close(storfile, close):
-	with open(storfile, 'w') as castor:
-		for taxid, num in close.items():
-			castor.write(str(taxid)+'\t'+str(num)+'\n')
-
-def store_close_level(storfile, data):
-        with open(storfile ,'w') as castor:
-                castor.write('>Sampled\n')
-                castor.write(data['Sampled']+"\n")
-                castor.write('>Closest\n')
-                castor.write(data['Closest']+"\n")
-                if 'All' in data:
-                      castor.write('>All'+'\n')
-                      for taxid, num in data['All'].items():
-                            castor.write(str(taxid)+'\t'+str(num)+'\n')
 
 if __name__=='__main__':
 	
