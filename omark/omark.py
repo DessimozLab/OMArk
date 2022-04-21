@@ -1,12 +1,14 @@
 import argparse
 import os
-import ete3
 import numpy as np
 import omamer
 import omamer.database
 from omamer.hierarchy import get_descendants, get_leaves, get_root_leaf_offsets , get_children
 import omamer_species_placement as osp
 import files as io
+import species_determination as spd
+import omamer_utils as utils
+
 
 
 def build_arg_parser():
@@ -41,530 +43,6 @@ def filter_partial_matches(omamdata, overlap_threshold=0.8, fragment_threshold =
             filter_dat.append(data)
     return filter_dat, partials, fragments
 
-
-#def getCloseTaxaOMAm():
-#alltaxa = dict()
-#for omamapping in omamerdats:
-
-# get taxonomic levels
-def get_hog_taxa(hog_off, sp_tab, prot_tab, hog_tab, cprot_buff, tax_tab, chog_buff):
-    '''
-    Compute all HOG taxonomic level induced by child HOGs or member proteins.
-    '''
-    taxa = set()
-    
-    # add taxa induced by member proteins
-    cprot_taxa = np.unique(sp_tab[prot_tab[get_children(hog_off, hog_tab, cprot_buff)]['SpeOff']]['TaxOff'])
-    for tax_off in cprot_taxa:
-        taxa.update(get_root_leaf_offsets(tax_off, tax_tab['ParentOff']))
-    
-    # add taxa induced by child HOGs (thus exluding their own taxon)
-    chog_taxa = np.unique(hog_tab[get_children(hog_off, hog_tab, chog_buff)]['TaxOff'])
-    for tax_off in chog_taxa:
-        taxa.update(get_root_leaf_offsets(tax_off, tax_tab['ParentOff'])[:-1])
-    
-    # remove taxa older than the HOG root-taxon
-    hog_tax_off = hog_tab[hog_off]['TaxOff']
-    taxa = taxa.difference(get_root_leaf_offsets(hog_tax_off, tax_tab['ParentOff'])[:-1])
-    
-    return taxa
-
-
-def get_hog2taxa(hog_tab, sp_tab, prot_tab, cprot_buff, tax_tab, chog_buff):
-    '''
-    Precompute compact hog2taxa.
-    '''
-    buff_off = 0
-    hog_taxa_idx = [buff_off]
-    hog_taxa_buff = []
-    for hog_off in tqdm(range(hog_tab.size)):
-        taxa = get_hog_taxa(hog_off, sp_tab, prot_tab, hog_tab, cprot_buff, tax_tab, chog_buff)
-        buff_off += len(taxa)
-        hog_taxa_idx.append(buff_off)
-        hog_taxa_buff.extend(taxa)
-    return np.array(hog_taxa_idx, dtype=np.int64), np.array(hog_taxa_buff, dtype=np.int16)
-
-
-#Deprecated
-def getCloseTaxa(omamerdata, dbpath, tax=None):
-    dbObj = pyoma.browser.db.Database(dbpath)
-    alltaxa = dict()
-    j=0
-    descendant = None
-    for omamapping in omamerdata:
-        print('Family')
-        print('----')
-        print(omamapping['subfamily'])
-        j+=1
-
-        suby = dbObj.get_subhogs(omamapping['subfamily'])
-        #The database do not handle too many request, need to reset the connection
-        if(j%1==0):
-            dbObj = pyoma.browser.db.Database(dbpath)
-        if tax :
-            curr_taxlist = list()
-            for elem in suby:
-                descendant = get_children(elem.level, tax)
-                if len(descendant)> len(curr_taxlist):
-                    curr_taxlist=descendant
-            descendant = curr_taxlist
-        seen = list()
-        for i in suby:
-            if i.hog_id==omamapping['subfamily']:
-                #print(i.level)
-                if i.level not in seen:
-                    seen.append(i.level)
-                if i.level in alltaxa:
-                    alltaxa[i.level]+=1
-                else:
-                    alltaxa[i.level]=1
-                if tax:
-                    if i.level not in descendant:
-                        #print([x.level for x in suby])
-                        continue
-                    descendant.remove(i.level)
-        if tax:
-            for loss in descendant:
-                if loss in alltaxa:
-                    alltaxa[loss] -=1
-                else :
-                    alltaxa[loss]=-1
-    alltaxa = {k: v for k, v in reversed(sorted(alltaxa.items(), key=lambda item: item[1]))}
-    return alltaxa
-
-
-def get_full_lineage_omamer(taxname, tax_tab, tax_buff = False,  descendant = False):
-    lineage = list()
-    tax_off2tax = tax_tab['ID']
-    tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
-    reached = False
-    #print(tax2tax_off) 
-    current_tax = tax_tab[tax2tax_off[taxname]]
-    while not reached: 
-        lineage.append(current_tax['ID'])
-        ancestor_tax = current_tax['ParentOff']
-        if ancestor_tax!=-1:
-                current_tax  = tax_tab[ancestor_tax]
-        else:
-                reached = True
-    if descendant :
-        #print(lineage)
-        #print(tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'])
-        lineage += tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'].tolist()
-    return lineage
-
-
-def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, allow_hog_redun =True):
-    
-    alltaxa = dict()
-    j=0
-    descendant = None
-    seen_hogs = list()
-
-    hog_off2subf = hog_tab['OmaID'] 
-    subf2hog_off = dict(zip(hog_off2subf, range(hog_off2subf.size)))
-    tax_off2tax = tax_tab['ID'] 
-    
-    for omamapping in omamerdata:
-        j+=1
-        if omamapping['hogid'] == 'na':
-            continue	
-        hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
-        taxa = get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
-        if not allow_hog_redun:
-            if omamapping['hogid'] in seen_hogs:
-                continue
-            else:
-                seen_hogs.append(omamapping['hogid'])
-        for taxon in taxa:
-            taxname = tax_off2tax[taxon]
-            if taxname in alltaxa :
-                alltaxa[taxname]+=1
-            else: 
-                alltaxa[taxname]=1
-    #print(len(alltaxa))
-    #print(alltaxa)
-    
-    alltaxa = {k: v for k, v in sorted(alltaxa.items(), key=lambda item: item[1], reverse=True)}
-    #alltaxa = { k:v for k in sorted(alltaxa.iteritems(), key=itemgetter(1), reverse=True)}
-    return alltaxa
-
-def get_HOGs_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, allow_hog_redun =True):
-    tax_HOGs = dict()
-    alltaxa = dict()
-    j=0
-    descendant = None
-    seen_hogs = list()
- 
-    hog_off2subf = hog_tab['OmaID'] 
-    subf2hog_off = dict(zip(hog_off2subf, range(hog_off2subf.size)))
-    tax_off2tax = tax_tab['ID']
-    for omamapping in omamerdata:
-        j+=1
-        if omamapping['hogid'] == 'na':
-            continue    
-        hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
-        taxa = get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
-        if not allow_hog_redun:
-            if omamapping['hogid'] in seen_hogs:
-                continue
-            else:
-                seen_hogs.append(omamapping['hogid'])
-  
-        for taxon in taxa:
-            taxname = tax_off2tax[taxon]
-            if taxname in alltaxa :
-                alltaxa[taxname]+=1
-                tax_HOGs[taxname].append((omamapping['hogid'],omamapping['qseqid']))
-            else: 
-                alltaxa[taxname]=1
-                tax_HOGs[taxname] = list()
-                tax_HOGs[taxname].append((omamapping['hogid'],omamapping['qseqid']))
-
-    #print(len(alltaxa))
-    #print(alltaxa)
-    
-    alltaxa = {k: v for k, v in sorted(alltaxa.items(), key=lambda item: item[1], reverse=True)}
-
-    return alltaxa, tax_HOGs
-
-#Deprecated
-def get_lineage_comp(alltaxa, clade, tax_tab, tax_buff):
-    lineage = get_full_lineage_omamer(clade.encode('ascii'), tax_tab, tax_buff, True)
-    compatible = 0
-    non_comp = 0
-    for k, v in alltaxa.items():
-        if k in lineage:
-            compatible+=v
-        else:
-            non_comp+=v
-    return compatible, non_comp
-
-#Deprecated
-def get_lower_noncontradicting(alltaxa, tax_tab):
-    current_lower_name = None
-    current_lower_lineage = None
-    for name, count  in alltaxa.items():
-        lineage = get_full_lineage_omamer(name, tax_tab)
-        if not current_lower_name:
-               current_lower_name = name
-               current_lineage = lineage
-        elif name in current_lineage:
-               pass
-        else:
-               if current_lower_name in lineage:
-                       current_lower_name = name
-                       current_lineage = lineage
-               else:
-                       return current_lower_name
-    return current_lower_name
-
-
-def get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff):
-    '''
-    implied because include taxa having lost their copy
-    '''
-    #Get the tax-off of the target HOG
-    tax_off = hog_tab[hog_off]['TaxOff']
-    #Get all taxa that descend from the taxon of target HOG
-    hog_taxa = set()    
-    #hog_taxa = set(get_descendant_taxa(tax_off, tax_tab, ctax_buff))
-    
-    hog_taxa.add(tax_off)
-    chogs_taxa = set()
-    #Substract the taxa that are in a subhog of this family
-    #for chog_off in _children_hog(hog_off, hog_tab, chog_buff):
-    #    ctax_off = hog_tab[chog_off]['TaxOff']
-    #    chogs_taxa.add(ctax_off)
-    #    chogs_taxa.update(get_descendant_taxa(ctax_off, tax_tab, ctax_buff))
-    return hog_taxa.difference(chogs_taxa)
-
-def get_lineage_ncbi(taxid):
-        lineage = list()
-        ncbi = ete3.NCBITaxa()
-        linid = ncbi.get_lineage(taxid)
-        linmap = ncbi.get_taxid_translator(linid)
-        lineage = [linmap[x] for x in linid]
-        return lineage
-
-def find_taxa_from_ncbi(lineage, tax_tab, sp_tab, tax_buff):
-        spec  = []
-        for tax in reversed(lineage):
-                try:
-                    spec = get_species_from_taxon(tax, tax_tab, sp_tab,tax_buff)
-                except KeyError:
-               	    continue
-                if len(spec)>=1:
-                        return tax.encode('ascii')
-        return None
-
-#Deprecated
-def getLineage(taxid, tax_tab, sp_tabm, tax_buff):
-	ncbi = ete3.NCBITaxa()
-	name = ncbi.get_taxid_translator(taxid)
-	sp_tax = get_species_from_taxon(name, tax_tab, sp_tab, tax_buff)
-	
-
-def get_species_from_taxon(taxname, tax_tab, sp_tab, tax_buff):
-    tax_off2tax = tax_tab['ID'] 
-    tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
-    tax_off = tax2tax_off[taxname.encode('ascii')]
-    sp_off_in_tax = omamer.hierarchy.get_leaves(tax_off, tax_tab, tax_buff)
-    sp_tax =[ tax_tab[x][0].decode() for x in sp_off_in_tax]
-    return sp_tax
-
-#Could be more efficient. For now fetch multiple time children of Tax. See if need improvement
-#Return a dictionary of set of species by clade.
-def get_spec_by_tax(tax_tab, sp_tab, tax_buff):
-    i=0
-    spec_by_tax = dict()
-    for tax_entry in tax_tab:
-        taxname = tax_entry['ID']
-        sp_off_in_tax = omamer.hierarchy.get_leaves(i, tax_tab, tax_buff)
-        sp_tax =[ tax_tab[x][0].decode() for x in sp_off_in_tax]
-        spec_by_tax[taxname] = set(sp_tax)
-        i+=1
-    return spec_by_tax
-
-def get_species_from_omamer(hog, prot_tab, spe_tab, cprot_buff) :
-    sp_list = list()
-    chog_off = hog["ChildrenProtOff"]
-    prots = cprot_buff[chog_off : chog_off + hog["ChildrenProtNum"]]
-
-    for p in prots:        
-        spe_off = prot_tab[p][1]
-        sp_list.append(spe_tab[spe_off])
-
-    return sp_list
-
-def get_ancestral_HOGs(hog, hog_tab, chog_buff):
-    all_hogs = list()
-    hog_off = hog['ParentOff'] 
-    if hog_off != -1:
-        anc_hog = hog_tab[hog_off]
-        all_hogs.append(anc_hog)
-        all_hogs += get_ancestral_HOGs(anc_hog, hog_tab, chog_buff)
-    return all_hogs
-
-def get_descendant_HOGs(hog, hog_tab, chog_buff):
-    all_hogs = list()
-    hog_off = hog['ChildrenOff'] 
-    hog_num = hog['ChildrenNum']
-    desc_hog = chog_buff[hog_off : hog_off+hog_num]
-    subhogs = [ hog_tab[x] for x in desc_hog]
-    all_hogs += subhogs
-    for subhog in subhogs :
-        all_hogs += get_descendant_HOGs(subhog, hog_tab, chog_buff)
-    return all_hogs
-
-
-def get_nb_hogs_by_clade(hog_tab, tax_tab):
-    hog_by_tax = dict()
-    for hog_off in range(hog_tab.size):
-        taxoff = hog_tab[hog_off]['TaxOff']
-        tax = tax_tab[taxoff]["ID"]
-        if tax not in hog_by_tax:
-            hog_by_tax[tax]=0
-        hog_by_tax[tax]+=1
-    return hog_by_tax
-
-def get_prop_duplicated(hog_tab, tax_tab, chog_buff):
-    transition = dict()
-    hog_by_tax = dict()
-    for hog_off in range(hog_tab.size):
-        t = hog_tab[hog_off]
-        taxoff = hog_tab[hog_off]['TaxOff']
-        tax = tax_tab[taxoff]["ID"]
-        if tax not in hog_by_tax:
-            hog_by_tax[tax]=0
-        descendants = get_descendant_HOGs(t, hog_tab, chog_buff)
-        if len(descendants)>0:
-            if tax not in transition:
-                transition[tax] = dict()
-            seen_sp = list()        
-            for desc in descendants:
-                
-                taxd_off = desc['TaxOff']
-                tax_d = tax_tab[taxd_off]['ID']
-                if tax_d not in transition[tax]:
-                    transition[tax][tax_d] = 0
-                if not tax_d in seen_sp:
-                    transition[tax][tax_d] += 1
-                    seen_sp.append(tax_d)
-        hog_by_tax[tax]+=1
-
-    prop_duplicated = dict()
-    for x in transition:
-        tot = hog_by_tax[x]
-        if x not in prop_duplicated:
-            prop_duplicated[x] = dict()
-        for desc in transition[x]:
-            prop_duplicated[x][desc] = transition[x][desc]/hog_by_tax[x]
-    return prop_duplicated
-
-#Species placements
-
-#Get all lineages from which proteins come in the analyzed proteomes considering the HOGs where the placement was done.
-def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff):
-        #This cutoff is made to avoid some false positives. Count lineage only if more than 0.001 of its HOGs are represented
-    cutoff_percentage = 0.001
-    #Condider only taxa with more than 2 hits
-    cutoff_nb_prot = 2
-
-    #Get taxa in which placement were made with the number of placement, couting individual HOGs only once
-    all_tax = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff,  allow_hog_redun =False)
-    
-    filter_all_tax = {key: value for (key, value) in all_tax.items() if value > cutoff_nb_prot }
-
-    #Consider only taxa in which at least one percent of the registered HOGs has a hit
-    all_taxa_perc = dict()
-    hog_by_tax = get_nb_hogs_by_clade(hog_tab, tax_tab)
-    proportion_hog_dup = get_prop_duplicated(hog_tab, tax_tab, chog_buff)
-    for k, v in filter_all_tax.items():
-        all_taxa_perc[k] = float(v)/float(hog_by_tax[k])
-    all_taxa_perc = {k: v for k, v in sorted(all_taxa_perc.items(), key=lambda item: item[1], reverse=True)}
-    filter_all_taxa_perc = {key: value for (key, value) in all_taxa_perc.items() if value >  cutoff_percentage}
-
-    #Create a tree with all target lineages and uses it to find likely taxa mixture
-    t =tree_from_taxlist(filter_all_taxa_perc, tax_tab )
-    tax_to_spec = get_spec_by_tax(tax_tab, sp_tab, tax_buff)
-    all_plac  = get_likely_spec(t,filter_all_taxa_perc,filter_all_tax, tax_to_spec, proportion_hog_dup)
-
-    return all_plac
-
-
-def tree_from_taxlist(all_taxa, tax_tab):
-
-    t = ete3.Tree(name='LUCA')
-    existing_node = ['LUCA']
-    curr_node = t
-    #Creating the tree only using lineage present in OMAmer, need to get the full lineage for this
-    for name, count  in all_taxa.items():
-        lineage = get_full_lineage_omamer(name, tax_tab)
-        for clade in reversed(lineage):
-            clade = clade.decode()
-            if clade not in existing_node:
-                curr_node = curr_node.add_child(name=clade)
-                existing_node.append(clade)
-            else:
-                curr_node = t&clade
-
-    return t
-
-#Rather than checking depth: check significant linearity to main branch + depth higher node. Maybe try with a new version
-#Return a list of tuple: (best ranking clade [allow for selection of lesser clade], maximum score, depth of the selected clade, continuity, depth of best_clade]?
-def get_likely_spec(t, score, numb, tax_to_spec, prop_inherited):
-    cur_score = score.get(t.name.encode(),0)
-    cur_numb = numb.get(t.name.encode(),0)
-    cur_sp = tax_to_spec[t.name.encode()]
-    if t.is_leaf():
-        return [(t.name, cur_score, cur_numb,0)]
-    all_child = list()
-    for child in t.get_children():
-        all_child += get_likely_spec(child, score, numb, tax_to_spec, prop_inherited)
-    max_score = 0
-    best_ranking = None
-    qualified = list()
-    contaminants =  list()
-    new_main = None
-    low_depth = 0
-
-    for child in all_child:
-        if child[1] >max_score:
-
-            best_ranking = child
-            max_score = child[1]
-        child_sp = tax_to_spec[child[0].encode()]
-        if child[2]>cur_numb*(prop_inherited.get(t.name.encode(), dict()).get(child[0].encode(),0)) and child[1]>cur_score*(len(child_sp)/len(cur_sp))  :
-            qualified.append(child)
-            if child[3]<=1:
-                low_depth += 1
-
-    #If there is only one possibility, and there are no multiple possibilities at a low level directly below
-    if len(qualified)==1 or (len(qualified)>1 and low_depth <=1):
-        
-        for qual in qualified:
-            qname = qual[0]
-            qscore = qual[1]
-            qnumb = qual[2]
-            
-            qdepth = qual[3]
-            if qscore==max_score:
-                new_main = (qname, qscore, qnumb,qdepth+1)
-            else:
-                contaminants.append((qname, qscore, qnumb,qdepth+1))
-    if not new_main:
-        #There is a case where there is no selected branch, but with some qualified clade. It means the branch
-        #with the most representation did not pass the threshold. In these case, we chose the current node: most general.
-        new_main = (t.name, cur_score, cur_numb, 0)
-        contaminants = list()
-    return [new_main] + contaminants
-
-def get_prot_by_clades(all_plac, omamdata, hog_tab, tax_tab, tax_buff, chog_buff):
-    all_tax, prot_by_tax = get_HOGs_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff,  allow_hog_redun = True)
-    t_complete = tree_from_taxlist(all_tax, tax_tab)
-    prot_clade = compute_protein_breakdowm(all_plac, t_complete, prot_by_tax)
-    return prot_clade
-
-def get_contaminant_proteins(placements, prot_by_clade):
-    all_contaminants = list()
-    for x in placements[1:]:
-        spec = x[0]
-        for level  in prot_by_clade[spec]:
-            proteins_id = [x[1] for x in level[2]]
-            all_contaminants += proteins_id
-    return all_contaminants
-
-def compute_protein_breakdowm(all_plac,t, prot_by_taxa):
-    prots_by_clade = dict()
-    clade_list = [ x[0] for x in all_plac]
-    node_list = [t&x for x in clade_list]
-    ancestor_list = list()
-    for node in node_list:
-        cur_closest_ancestor = None
-        cur_depth = 0
-        for snd_node in node_list:
-            if node!=snd_node:
-                    ca = t.get_common_ancestor(node, snd_node)
-                    depth = t.get_distance(ca)
-                    if not cur_closest_ancestor or depth>cur_depth:
-                        cur_closest_ancestor = ca
-                        cur_depth = depth
-        ancestor_list.append(cur_closest_ancestor)
-    for i in range(len(node_list)):
-        clade = clade_list[i]
-        cur_node = node_list[i]
-        ancestor = ancestor_list[i]
-        seen_nodes = list()
-        level = 0
-        all_prots = list()
-
-        while cur_node != ancestor:
-            all_prots.append((level, cur_node.name, prot_by_taxa.get(cur_node.name.encode(),[])))
-            seen_nodes.append(cur_node.name)
-            all_children = cur_node.get_descendants()
-            for node_child in all_children:
-                if node_child.name not in seen_nodes:
-                    all_prots.append((level, node_child.name, prot_by_taxa.get(node_child.name.encode(),[])))
-                    seen_nodes.append(node_child.name)
-
-            cur_node = cur_node.up
-            level += 1 
-        
-        prots_by_clade[clade] = all_prots
-    return prots_by_clade
-
-def reorganized_placement(placements, prot_by_clade):
-    new_placements = list()
-    for clade in placements:
-        count = 0
-        clname = clade[0]
-        for levels in prot_by_clade[clname]:
-            count += len(levels[2])
-        #Drop depth because it does not matter here
-        new_placements.append((clname,clade[1],count))
-    new_placements.sort(key = lambda x: x[2], reverse=True)
-    return new_placements
 
 #Reorder informations from different treatment into a single cohesive results for stats about the set of protein coding genes
 def score_whole_proteome(found_clade, not_in_clade, partials, fragments, not_mapped, contaminants):
@@ -603,8 +81,8 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
     poss_hog = list()
     seen_hog = list()
     other_cl_hog = list()
-    lineage = get_full_lineage_omamer(clade.encode('ascii'), tax_tab, tax_buff, True)
-    sp_target = get_species_from_taxon(clade, tax_tab, sp_tab, tax_buff)
+    lineage = utils.get_full_lineage_omamer(clade.encode('ascii'), tax_tab, tax_buff, True)
+    sp_target = utils.get_species_from_taxon(clade, tax_tab, sp_tab, tax_buff)
 
     for f in fam_tab:
 
@@ -633,13 +111,13 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
         prot_off = t["ChildrenProtOff"]
 	
         if duplicate:
-                all_desc = get_descendant_HOGs(t, hog_tab, chog_buff)
+                all_desc = utils.get_descendant_HOGs(t, hog_tab, chog_buff)
                 for desc in all_desc:
                         desc_tax_name = tax_tab[desc['TaxOff']]["ID"]
                         if desc_tax_name not in lineage :
                                continue
-                        sp_hog += [x[0].decode() for x in get_species_from_omamer(desc,prot_tab, sp_tab, cprot_buff)]
-        sp_hog += [x[0].decode() for x in get_species_from_omamer(t,prot_tab, sp_tab, cprot_buff)]
+                        sp_hog += [x[0].decode() for x in utils.get_species_from_omamer(desc,prot_tab, sp_tab, cprot_buff)]
+        sp_hog += [x[0].decode() for x in utils.get_species_from_omamer(t,prot_tab, sp_tab, cprot_buff)]
         inter = set(sp_hog).intersection(set(sp_target))
         #print(len(inter))
         #print(len(sp_target))
@@ -697,7 +175,7 @@ def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
             done = True
 
         count_os = 0
-        for subhog in [x['OmaID'].decode() for x in get_descendant_HOGs(hog, hog_tab, chog_buff)]:
+        for subhog in [x['OmaID'].decode() for x in utils.get_descendant_HOGs(hog, hog_tab, chog_buff)]:
 		
             if subhog in all_subf:
                 if subhog not in seen_hog_id:
@@ -717,7 +195,7 @@ def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
             done = True
             
             
-        for superhog in [x['OmaID'].decode() for x in get_ancestral_HOGs(hog, hog_tab, chog_buff)]:
+        for superhog in [x['OmaID'].decode() for x in utils.get_ancestral_HOGs(hog, hog_tab, chog_buff)]:
             if superhog in all_subf:
                 if superhog not in seen_hog_id:
                     seen_hog_id.append(superhog)
@@ -762,13 +240,13 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
             #Get only full match for placement
             full_match_data, partials, fragments = filter_partial_matches(omamdata)
             #Determine species and contamination
-            placements = get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)      
+            placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)      
             #Get the proteins placed in species correspoding to each placement in a dictionary
-            prot_clade = get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
-            contaminant_prots = get_contaminant_proteins(placements, prot_clade)
+            prot_clade = spd.get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
+            contaminant_prots = spd.get_contaminant_proteins(placements, prot_clade)
             #Reorganize the placements to consider the species with most proteins to be the main one. (Needed in edge cases where the proteins of the contaminant
             #is an exhaustive set)
-            placements = reorganized_placement(placements, prot_clade)
+            placements = spd.reorganized_placement(placements, prot_clade)
 
             #Procedure when the user do not give taxonomu information. Will use the main species from the placement
             if taxid==None:
@@ -776,10 +254,10 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
                 likely_clade =  placements[0][0].encode()
             #Otherwise find the closest clade in the OMAmer database from the given taxid
             else :
-                lin = get_lineage_ncbi(taxid)
-                likely_clade = find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
+                lin = spd.get_lineage_ncbi(taxid)
+                likely_clade = spd.find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
             #Get the first parent of the chosen clade with at least 5 species
-            closest_corr = osp.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff)
+            closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff)
             #Conshog : HOG with 80% representative of the target lineage
             #Cladehog : HOG with at least 1 representative of the target lineage present in the common ancestir
             conshog, cladehog = get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
