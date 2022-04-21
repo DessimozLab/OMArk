@@ -24,6 +24,25 @@ def parseOmamer(file):
             alldata.append(data)
     return alldata, not_mapped 
 
+#This function remove sequences that only match partially to HOGs of interests,
+#in order to consider only the most robust placement.
+#Will remove sequence for which at least 20% of the sequence share no sequence with the HOG
+#as well as proteins that are less than half the median size of the sequences in the HOGs
+def filter_partial_matches(omamdata, overlap_threshold=0.8, fragment_threshold = 0.5):
+    filter_dat = list()
+    partials = list()
+    fragments = list()
+    for data in omamdata:
+        if float(data['overlap'])< overlap_threshold:
+            partials.append(data['qseqid'])
+        elif float(data['qseqlen'])< fragment_threshold*float(data['subfamily-medianseqlen']):
+            fragments.append(data['qseqid'])
+        else:
+            filter_dat.append(data)
+    return filter_dat, partials, fragments
+
+
+
 def store_results(storfile, results):
     with open(storfile, 'w') as storage:
         for categ, hoglist in results.items():
