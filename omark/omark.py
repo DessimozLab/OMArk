@@ -1,25 +1,11 @@
 import argparse
 import os
 import omamer.database
-import files as io
-import species_determination as spd
-import omamer_utils as utils
-import scoring as sc
-
-def build_arg_parser():
-    """Handle the parameter sent when executing the script from the terminal
-
-    Returns
-    -----------
-    A parser object with the chosen option and parameters"""
-
-    parser = argparse.ArgumentParser(description="Compute an OMA quality score from the OMAmer file of a proteome.")   
-    parser.add_argument('-f', '--file', help="The OMAmer file to read." )	
-    parser.add_argument('-d', '--database', help="The OMAmer database.")
-    parser.add_argument('-o', '--outputFolder', help="The folder containing output data the script wilp generate.")
-    parser.add_argument('-t', '--taxid', help='Taxonomic identifier', default=None)
-    parser.add_argument('-of', '--og_fasta', help='Original FASTA file', default=None)
-    return parser
+import omark.files as io
+import omark.species_determination as spd
+import omark.omamer_utils as utils
+import omark.scoring as sc
+import omark.graphics as graph
 
 def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True):
 
@@ -100,18 +86,14 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
             io.store_results(stordir+'/'+basefile+".omq", res_completeness) 
             io.store_summary(stordir+'/'+basefile+".sum",
                             res_completeness, res_proteomes, closest_corr, placements, prot_clade)
+            #Write graphical representation
+            graph.plot_omark_results(stordir+'/'+basefile+".pdf", res_completeness, res_proteomes)
 
-
-if __name__=='__main__':
-	
-    print('Setting up')
-    parser = build_arg_parser()  
-    arg = parser.parse_args()
-    omamerfile = arg.file
-    dbpath = arg.database
-    outdir = arg.outputFolder
-    taxid = arg.taxid
-    original_fasta = arg.og_fasta
+def launcher(args):
+    omamerfile = args.file
+    dbpath = args.database
+    outdir = args.outputFolder
+    taxid = args.taxid
+    original_fasta = args.og_fasta
     get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta)
-    print('Done')
 

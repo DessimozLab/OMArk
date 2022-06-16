@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+
+import argparse
+import omark.omark as omark
+
+def build_arg_parser():
+    """Handle the parameter sent when executing the script from the terminal
+
+    Returns
+    -----------
+    A parser object with the chosen option and parameters"""
+
+    parser = argparse.ArgumentParser(description="Compute an OMA quality score from the OMAmer file of a proteome.")   
+    parser.add_argument('-f', '--file', help="The OMAmer file to read." )	
+    parser.add_argument('-d', '--database', help="The OMAmer database.")
+    parser.add_argument('-o', '--outputFolder', help="The folder containing output data the script wilp generate.")
+    parser.add_argument('-t', '--taxid', help='Taxonomic identifier', default=None)
+    parser.add_argument('-of', '--og_fasta', help='Original FASTA file', default=None)
+    return parser
+
+
+if __name__=='__main__':
+	
+    print('Setting up')
+    parser = build_arg_parser()  
+    arg = parser.parse_args()
+    omark.launcher(arg)
+    print('Done')

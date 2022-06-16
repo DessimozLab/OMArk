@@ -1,6 +1,6 @@
 from omamer.hierarchy import get_descendants
 import ete3
-import omamer_utils as utils
+import omark.omamer_utils as utils
 
 
 #Get all lineages from which proteins come in the analyzed proteomes considering the HOGs where the placement was done.

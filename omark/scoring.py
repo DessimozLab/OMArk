@@ -1,4 +1,4 @@
-import omamer_utils as utils
+import omark.omamer_utils as utils
 from omamer.hierarchy import get_descendants
 
 
