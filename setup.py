@@ -8,7 +8,7 @@ with open('{:s}/__init__.py'.format(name), 'rt') as fp:
         if line.startswith('__version__'):
             exec(line.rstrip())
 
-requirements = ['biopython', 'ete3', 'omamer']
+requirements = ['biopython', 'ete3', 'omamer>=0.2.2', 'matplotlib']
 
 desc = 'OMArk - Proteome quality assesment based on OMAmer placements'
 

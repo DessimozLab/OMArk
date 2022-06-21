@@ -5,12 +5,14 @@ OMArk rely on the OMA orthology database, from which it exploits orthology relat
 
 ## Installation
 
-You can use OMArk by cloning this repository.
-All dependancies can be installed in a conda environment, using the omark\_env.yml file.
+You can use OMArk by cloning this repository and installing it manually with your Python installer.
 
-OMArk rely on an OMAmer database to run. For all OMArk features to work correctly, it is better for this database to cover a wide range of species.
-We recommend using one constructed from the whole OMA database. You can download one manually on this link : [DOI]([![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6462027.svg)](https://doi.org/10.5281/zenodo.6462027) 
-File :  OMAmerDB.tar.gz
+Example command from the git directory:
+``python setup.py install``
+or
+``pip install .``
+
+You can then use it on yout Python environment by calling it as a command line tool.
 
 ##Usage
 
@@ -58,6 +60,6 @@ Then, use OMArk (Should take less than 10 minutes) after creating an empty outpu
 
 	mkdir example_data/omark_output
 
-	python omark/omark.py -f example_data/UP000005640_9606.omamer -d LUCA.h5 -o example_data/omark_output
+	omark -f example_data/UP000005640_9606.omamer -d LUCA.h5 -o example_data/omark_output
 
 You can now explore OMArk results in the omark\_output folder
