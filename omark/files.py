@@ -70,7 +70,7 @@ def store_summary(storfile, results, results_proteomes, selected_lineage, contam
         storage.write('#The selected clade was '+selected_lineage.decode()+"\n")
         total = len(results['Single'])+len(results['Duplicated'])+ len(results['Overspecific_S']) + len(results['Overspecific_D'])+ len(results['Underspecific']) + len(results['Lost'])
         storage.write('#Number of conserved HOGs is: '+str(total)+'\n')
-        tot_genes = len(results_proteomes['Not_Placed'])+len(results_proteomes['Correct'])+len(results_proteomes['Erroneous'])
+        tot_genes = len(results_proteomes['Not_Placed'])+len(results_proteomes['Contamination'])+len(results_proteomes['Correct'])+len(results_proteomes['Erroneous'])
         storage.write('#Results on conserved HOGs is:\n')
         storage.write('#S:Single:S, D:Duplicated[U:Unexpected,E:Expected],M:Missing\n')
         storage.write(f'S:{len(results["Single"])+len(results["Overspecific_S"])+len(results["Underspecific"])},D:{len(results["Duplicated"])+len(results["Overspecific_D"])}[U:{len(results["Duplicated"])},E:{len(results["Overspecific_D"])}],M:{len(results["Lost"])}\n') 
