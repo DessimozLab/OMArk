@@ -31,9 +31,9 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
     prot_tab = db._prot_tab
     sp_tab = db._sp_tab
     tax_tab = db._tax_tab[:]
-    fam_tab = db._fam_tab
+    fam_tab = db._fam_tab[:]
     cprot_buff = db._cprot_arr
-    tax_buff = db._ctax_arr
+    tax_buff = db._ctax_arr[:]
     chog_buff = db._chog_arr
     hogtax_buff = db._hog_taxa_buff
 	 
