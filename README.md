@@ -13,6 +13,9 @@ or
 ``pip install .``
 
 You can then use it on yout Python environment by calling it as a command line tool.
+OMArk rely on an OMAmer database to run. For all OMArk features to work correctly, it is better for this database to cover a wide range of species.
+We recommend using one constructed from the whole OMA database. You can download one manually on this link : [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6462027.svg)](https://doi.org/10.5281/zenodo.6462027)File :  OMAmerDB.tar.gz
+
 
 ##Usage
 
@@ -33,12 +36,12 @@ Required arguments: ``-f (--file)``, ``-d (--database)``, ``-o (--output)``
 
 A default OMAmer output consists of 4 files with the same name but different extensions.
 
-OMArk output the main results of the analysis in a file with the .sum extension in the output folder
-This commented file reports:
+OMArk output the main results of the analysis in two complementary fles: a machine readable one, identified by its .sum extension, and a human-readable summary ending with \_detailed_summary.txt.
+These commented files reports:
 * The reference lineage that was used for quality assesment
 * The number of conserved Hierarchical Orthologous Groups (HOGs) used for completeness assesment
 * The completeness assesment results (Single, Duplicated, Missing)
-* The whole proteome quality assesment results (Accurate placements, Erroneous Placements, Contaminants, Missing genes)
+* The whole proteome quality assesment results (Consistent placements, Inconsistent Placements, Contaminants, Missing genes)
 * The species and contaminant detected in the proteome
 
 The file with the .tax extension indicate: the closest taxonomic lineage in the OMA database and the selected reference lineage.

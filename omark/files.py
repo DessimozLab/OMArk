@@ -15,7 +15,7 @@
         '''
 import Bio
 import re
-
+import jinja2   
 
 #This function read an OMAmer file (input_) and output two variables:
 #alldata -> A list of all OMAmer placement, containing a dictionary correspoding to all of the OMAmer data results
@@ -65,6 +65,121 @@ def store_results(storfile, results):
             for elem in hoglist:
                 storage.write(elem+'\n')
 
+def store_list(storfile, data):
+
+    with open(storfile, 'w') as storage:
+        for elem in data:
+            storage.write(elem+'\n')
+
+
+
+
+def write_templated_report(template_file, storfile, results, results_proteomes, selected_lineage, species_report):
+
+    env = jinja2.Environment(
+    loader= jinja2.PackageLoader("omark", "assets"),
+    autoescape=jinja2.select_autoescape()
+    )
+    template =  env.get_template(template_file)
+
+    all_stats = organize_results(results, results_proteomes, selected_lineage, species_report)
+
+    with open(storfile, 'w') as outfile:
+        outfile.write(template.render(all_stats))
+
+
+#This function create a detailed dictionnary of all OMArk stats, by post-processing the results of the different analysis.
+def organize_results(results, results_proteomes, selected_lineage, species_report):
+
+    ancestral_lineage = selected_lineage.decode()
+
+
+    single_nr = len(results['Single'])+len(results['Overspecific_S'])+len(results['Underspecific'])
+    dup_nr = len(results['Duplicated'])+ len(results['Overspecific_D'])
+    dup_exp_nr = len(results['Overspecific_D'])
+    dup_unexp_nr = len(results['Duplicated'])
+    missing_nr = len(results['Lost'])
+    cons_hog_nr = single_nr+dup_nr+ missing_nr
+    single_percent = 100*single_nr/cons_hog_nr
+    dup_percent = 100*dup_nr/cons_hog_nr
+    dup_exp_percent = 100*dup_exp_nr/cons_hog_nr
+    dup_unexp_percent = 100*dup_unexp_nr/cons_hog_nr
+    missing_percent = 100*missing_nr/cons_hog_nr
+
+
+    consistent_nr =  len(results_proteomes['Correct'])
+    consistent_partial_nr = len(results_proteomes['Correct_Partial'])
+    consistent_fragment_nr = len(results_proteomes['Correct_Fragment'])
+    inconsistent_nr =  len(results_proteomes['Erroneous'])
+    inconsistent_partial_nr = len(results_proteomes['Erroneous_Partial'])
+    inconsistent_fragment_nr = len(results_proteomes['Erroneous_Fragment'])
+    contamination_nr = len(results_proteomes['Contamination'])
+    contamination_partial_nr = len(results_proteomes['Contamination_Partial'])
+    contamination_fragment_nr = len(results_proteomes['Contamination_Fragment'])
+    no_map_nr = len(results_proteomes['Not_Placed'])
+    protein_nr = consistent_nr + inconsistent_nr + contamination_nr + no_map_nr
+    
+    consistent_percent = 100*consistent_nr/protein_nr
+    consistent_partial_percent = 100*consistent_partial_nr/protein_nr
+    consistent_fragment_percent = 100*consistent_fragment_nr/protein_nr
+    inconsistent_percent = 100*inconsistent_nr/protein_nr
+    inconsistent_partial_percent = 100*inconsistent_partial_nr/protein_nr
+    inconsistent_fragment_percent = 100*inconsistent_fragment_nr/protein_nr
+    contamination_percent = 100*contamination_nr/protein_nr
+    contamination_partial_percent = 100*contamination_nr/protein_nr
+    contamination_fragment_percent = 100*contamination_nr/protein_nr
+    no_map_percent = 100*no_map_nr/protein_nr
+
+    contaminants = list()
+    main = True
+    for values in species_report:     
+        species_info = {"name" : values[0], "protein_nr" : values[2], "protein_percent" : 100*values[2]/protein_nr}
+        if main:
+            main_clade = species_info
+            main = False
+        else:
+            contaminants.append(species_info)
+    all_stats = {  "ancestral_lineage" : ancestral_lineage,
+                        "cons_hog_nr" : cons_hog_nr,
+                        "single_nr" : single_nr, 
+                        "dup_nr" : dup_nr,
+                        "dup_exp_nr" : dup_exp_nr,
+                        "dup_unexp_nr" : dup_unexp_nr,
+                        "missing_nr" : missing_nr,
+                        "single_percent" : single_percent,
+                        "dup_percent": dup_percent,
+                        "dup_exp_percent" : dup_exp_percent,
+                        "dup_unexp_percent" : dup_unexp_percent,
+                        "missing_percent" : missing_percent,
+                        "protein_nr" : protein_nr,
+                        "consistent_nr" : consistent_nr,
+                        "consistent_partial_nr" : consistent_partial_nr,
+                        "consistent_fragment_nr" : consistent_fragment_nr,
+                        "inconsistent_nr" : inconsistent_nr,
+                        "inconsistent_partial_nr" : inconsistent_partial_nr,
+                        "inconsistent_fragment_nr" : inconsistent_fragment_nr,
+                        "contamination_nr" : contamination_nr,
+                        "contamination_partial_nr" : contamination_partial_nr,
+                        "contamination_fragment_nr" : contamination_fragment_nr,
+                        "no_map_nr" : no_map_nr,
+                        "consistent_percent" : consistent_percent,
+                        "consistent_partial_percent" : consistent_partial_percent,
+                        "consistent_fragment_percent" : consistent_fragment_percent,
+                        "inconsistent_percent" : inconsistent_percent,
+                        "inconsistent_partial_percent" : inconsistent_partial_percent,
+                        "inconsistent_fragment_percent" : inconsistent_fragment_percent,
+                        "contamination_percent" : contamination_percent,
+                        "contamination_partial_percent"  : contamination_partial_percent,
+                        "contamination_fragment_percent" : contamination_fragment_percent,
+                        "no_map_percent" : no_map_percent,
+                        "main_clade" : main_clade,
+                        "contaminants" : contaminants }
+    return all_stats
+
+
+
+
+#Function to write the OMArk .sum file. Deprecated and replaced by the more gene 'write_templated_report'
 def store_summary(storfile, results, results_proteomes, selected_lineage, contaminant = False, prot_clade = False):
     with open(storfile,'w') as storage:
         storage.write('#The selected clade was '+selected_lineage.decode()+"\n")
@@ -92,6 +207,7 @@ def store_summary(storfile, results, results_proteomes, selected_lineage, contam
                 storage.write('\t'.join([str(x) for x in values])+'\n')
                 count+=1
                 #storage.write('\t'+str(len(prot_clade[values[0]][0][2]))+'\n')
+
 
 def store_contaminant_FASTA(stordir, basefile_name, prot_clade, original_FASTA_file):
     seqs_by_id = dict()

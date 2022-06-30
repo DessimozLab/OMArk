@@ -100,8 +100,10 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
             #Write results files
             io.store_results(stordir+'/'+basefile+".ump", {'Unmapped' : not_mapped, 'UnClade' : nic})
             io.store_results(stordir+'/'+basefile+".omq", res_completeness) 
-            io.store_summary(stordir+'/'+basefile+".sum",
-                            res_completeness, res_proteomes, closest_corr, placements, prot_clade)
+
+            io.write_templated_report('summarized_report.txt', stordir+'/'+basefile+".sum", res_completeness, res_proteomes, closest_corr, placements)
+
+            io.write_templated_report('textual_report.txt', stordir+'/'+basefile+"_detailed_summary.txt", res_completeness, res_proteomes, closest_corr, placements)
             #Write graphical representation
             graph.plot_omark_results(stordir+'/'+basefile+".pdf", res_completeness, res_proteomes)
 
