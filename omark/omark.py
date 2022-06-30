@@ -23,7 +23,7 @@ import omark.omamer_utils as utils
 import omark.scoring as sc
 import omark.graphics as graph
 
-def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True):
+def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None):
 
     db = omamer.database.Database(dbpath)
     #Variables
@@ -45,6 +45,11 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         if force or not os.path.isfile(stordir+'/'+basefile+".omq"): 
             #Extract OMAmer data
             omamdata, not_mapped  = io.parseOmamer(omamerfile)
+
+            if isoform_file:
+                isoform_data = io.parse_isoform_file(isoform_file)
+                omamdata, not_mapped, selected_isoforms = io.select_isoform(isoform_data, omamdata)
+
             #Get only full match for placement
             full_match_data, partials, fragments = io.filter_partial_matches(omamdata)
 
@@ -97,6 +102,10 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
                 if contamination :
                     io.store_contaminant_FASTA(stordir, basefile, prot_clade, original_FASTA_file)
                 io.store_incorrect_map_FASTA(stordir, basefile, not_mapped, nic, original_FASTA_file)
+
+
+            if isoform_file:
+                io.store_list(stordir+'/'+basefile+"_selected_isoforms.txt", selected_isoforms)
             #Write results files
             io.store_results(stordir+'/'+basefile+".ump", {'Unmapped' : not_mapped, 'UnClade' : nic})
             io.store_results(stordir+'/'+basefile+".omq", res_completeness) 
@@ -113,5 +122,6 @@ def launcher(args):
     outdir = args.outputFolder
     taxid = args.taxid
     original_fasta = args.og_fasta
-    get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta)
+    isoform_file = args.isoform_file
+    get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta, isoform_file=isoform_file)
 

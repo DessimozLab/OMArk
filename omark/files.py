@@ -39,6 +39,43 @@ def parseOmamer(file):
             alldata.append(data)
     return alldata, not_mapped 
 
+def parse_isoform_file(file):
+    isoform_by_gene = list()
+    with open(file) as handle:
+        for line in handle.readlines():
+            line = line.strip('\n')
+            splice = line.split(";")
+            isoform_by_gene.append(splice)
+    return isoform_by_gene
+
+
+def select_isoform(isoform_data, alldata):
+    indexed_data = {x['qseqid'] : x for x in alldata}
+    best_scoring_isoforms = list()
+    selected_isoforms = list()
+    not_mapped_gene = list()
+    for gene in isoform_data:
+        main_variant = None
+        best_score = 0
+
+        for isoform in gene:
+            omamer_res = indexed_data.get(isoform)
+            if omamer_res:
+
+                score = float(omamer_res['family-score'])*min(int(omamer_res['qseqlen']),int(omamer_res['subfamily-medianseqlen']))
+                if score > best_score:
+                    best_score = score
+                    main_variant = omamer_res
+        if main_variant != None:
+            best_scoring_isoforms.append(main_variant)
+            selected_isoforms.append(isoform)
+        else:
+            #If there is no main variant, we have no way to select the best isoform. We select one by default, here the latest appearing in the FASTA file
+            not_mapped_gene.append(isoform)
+            selected_isoforms.append(isoform)
+    return best_scoring_isoforms, not_mapped_gene, selected_isoforms
+
+
 #This function remove sequences that only match partially to HOGs of interests,
 #in order to consider only the most robust placement.
 #Will remove sequence for which at least 20% of the sequence share no sequence with the HOG
