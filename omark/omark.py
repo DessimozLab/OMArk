@@ -103,7 +103,9 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
             io.store_summary(stordir+'/'+basefile+".sum",
                             res_completeness, res_proteomes, closest_corr, placements, prot_clade)
             #Write graphical representation
-            graph.plot_omark_results(stordir+'/'+basefile+".pdf", res_completeness, res_proteomes)
+            plot_res = {'pdf': os.path.join(stordir, basefile + ".pdf"),
+                        'png': os.path.join(stordir, basefile + ".png")}
+            graph.plot_omark_results(plot_res, res_completeness, res_proteomes)
 
 def launcher(args):
     omamerfile = args.file

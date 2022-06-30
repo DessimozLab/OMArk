@@ -29,9 +29,8 @@ CONTAMINATION = '#e69f00ff'
 UNKNOWN = '#000000ff'
 
 
-
-def plot_omark_results(storfile, results, results_proteomes, fragment_info = True):
-	fig, axes = plt.subplots(2,1,figsize = (3,10))
+def plot_omark_results(format_filename_dict, results, results_proteomes, fragment_info = True):
+	fig, axes = plt.subplots(2, 1, figsize = (3,10))
 	total_completeness = len(results['Single'])+len(results['Duplicated'])+ len(results['Overspecific_S']) + len(results['Overspecific_D'])+ len(results['Underspecific']) + len(results['Lost'])
 	single = 100*(len(results['Single'])+len(results['Overspecific_S'])+len(results['Underspecific']))/total_completeness
 	dup = 100*(len(results['Duplicated']) + len(results['Overspecific_D']))/total_completeness
@@ -92,4 +91,5 @@ def plot_omark_results(storfile, results, results_proteomes, fragment_info = Tru
 
 	plt.subplots_adjust(wspace=0, hspace=0)
 
-	plt.savefig(storfile, format='pdf', bbox_inches = "tight")
+	for fmt, filename in format_filename_dict.items():
+		plt.savefig(filename, format=fmt, bbox_inches="tight")
