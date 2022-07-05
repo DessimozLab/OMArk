@@ -27,12 +27,12 @@ def build_arg_parser():
     A parser object with the chosen option and parameters"""
 
     parser = argparse.ArgumentParser(description="Compute an OMA quality score from the OMAmer file of a proteome.")   
-    parser.add_argument('-f', '--file', help="The OMAmer file to read." )	
-    parser.add_argument('-d', '--database', help="The OMAmer database.")
-    parser.add_argument('-o', '--outputFolder', help="The folder containing output data the script wilp generate.")
-    parser.add_argument('-t', '--taxid', help='Taxonomic identifier', default=None)
-    parser.add_argument('-of', '--og_fasta', help='Original FASTA file', default=None)
-    parser.add_argument('-i', '--isoform_file', help='A semi-colon separated file, listing all isoforoms of each genes, with one gene per line.', default=None)
+    parser.add_argument('-f', '--file', type=str, help="Input OMAmer file - obtained as output from an OMAmer search.", required=True)	
+    parser.add_argument('-d', '--database', type=str, help="The OMAmer database.", required=True)
+    parser.add_argument('-o', '--outputFolder', type=str, help="The folder containing output data the script wilp generate.", default="./omark_output/")
+    parser.add_argument('-t', '--taxid', type=int, help='Taxonomic identifier', default=None)
+    parser.add_argument('-of', '--og_fasta', type=str, help='Original FASTA file', default=None)
+    parser.add_argument('-i', '--isoform_file', type=str, help='A semi-colon separated file, listing all isoforoms of each genes, with one gene per line.', default=None)
     return parser
 
 

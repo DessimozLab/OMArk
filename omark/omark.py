@@ -22,10 +22,13 @@ import omark.species_determination as spd
 import omark.omamer_utils as utils
 import omark.scoring as sc
 import omark.graphics as graph
+import sys
 
 def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None):
 
+
     db = omamer.database.Database(dbpath)
+
     #Variables
     hog_tab = db._hog_tab[:]
     prot_tab = db._prot_tab
@@ -50,7 +53,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
                 isoform_data = io.parse_isoform_file(isoform_file)
                 omamdata, not_mapped, selected_isoforms = io.select_isoform(isoform_data, omamdata)
 
-            #Get only full match for placement
+            #Get only full match for placements
             full_match_data, partials, fragments = io.filter_partial_matches(omamdata)
 
 
@@ -92,6 +95,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
 
             res_proteomes = sc.score_whole_proteome(found_clade, nic, partials, fragments, not_mapped, contaminant_prots)
 
+            db.close()
 
             #Store the taxonomic choices
             io.store_close_level(stordir+'/'+basefile+".tax", {'Sampled': str(closest_corr.decode()),
@@ -116,6 +120,30 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
             #Write graphical representation
             graph.plot_omark_results(stordir+'/'+basefile+".pdf", res_completeness, res_proteomes)
 
+
+def check_parameters(omamerfile, dbpath, stordir, taxid=None, original_FASTA_file = None,  isoform_file = None):
+
+    omamerfile_valid = io.check_omamerfile(omamerfile)
+
+    database_valid = utils.check_database(dbpath)
+
+    taxid_valid = spd.check_taxid(taxid)
+
+    output_directory_valid = io.check_and_create_output_folder(stordir)
+
+    if original_FASTA_file:
+        fasta_valid = io.check_FASTA(original_FASTA_file)
+    else:
+        fasta_valid = True
+
+    if isoform_file:
+        isoform_valid = io.check_isoform_file(isoform_file)
+    else:
+        isoform_valid = True
+
+    return omamerfile_valid and database_valid and output_directory_valid and taxid_valid and fasta_valid and isoform_valid
+
+
 def launcher(args):
     omamerfile = args.file
     dbpath = args.database
@@ -123,5 +151,9 @@ def launcher(args):
     taxid = args.taxid
     original_fasta = args.og_fasta
     isoform_file = args.isoform_file
-    get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta, isoform_file=isoform_file)
+    if check_parameters(omamerfile, dbpath, outdir,taxid,original_fasta,isoform_file):
+        get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta, isoform_file=isoform_file)
+    else:
+        print('Exiting because one or more parameters are incorrect')
+        sys.exit(1)
 

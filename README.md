@@ -19,7 +19,7 @@ We recommend using one constructed from the whole OMA database. You can download
 
 ##Usage
 
-Required arguments: ``-f (--file)``, ``-d (--database)``, ``-o (--output)`` 
+Required arguments: ``-f (--file)``, ``-d (--database)``
 
     usage :python omark.py [-h] [-f FILE] [-d DATABASE] [-o OUTPUTFOLDER] [-t TAXID] [-of OG_FASTA]
 
@@ -28,7 +28,7 @@ Required arguments: ``-f (--file)``, ``-d (--database)``, ``-o (--output)``
 |:--------------------|:----------------------|:-----------|
 | [``-f`` ``--file``](#markdown-header--file)||Path to an OMAmer search output file
 | [``-d`` ``--db``](#markdown-header--database)||Path to an OMAmer database
-| [``-o`` ``--outputFolder``](#markdown-header--outputFolder)||Path to an (existing) folder into which OMArk results will be output.
+| [``-o`` ``--outputFolder``](#markdown-header--outputFolder)|'./omark_output/'|Path to the folder into which OMArk results will be output. OMArk will create it if it does not exist.
 | [``-t`` ``--taxid``](#markdown-header--taxid)|None| NCBI taxid corresponding to the input proteome (Optionnal).
 | [``-of`` ``-og_fasta``](#markdown-header--og_fasta)|None| The original proteomes file. Provide if you want optionnal FASTA file to be outputted by Omark (Sequences by categories, sequences by detected species, etc)
 

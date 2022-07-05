@@ -19,6 +19,16 @@ import ete3
 import omark.omamer_utils as utils
 
 
+# Check whether the taxid seem to exist in the NCBI database (Using the get_lineage function)
+def check_taxid(taxid):
+        try:
+            ncbi = ete3.NCBITaxa()
+            linid = ncbi.get_lineage(taxid)
+        except ValueError:
+            print('The provided taxid is not found in the NCBI database')
+            return False
+        return True
+
 #Get all lineages from which proteins come in the analyzed proteomes considering the HOGs where the placement was done.
 def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff):
         #This cutoff is made to avoid some false positives. Count lineage only if more than 0.001 of its HOGs are represented

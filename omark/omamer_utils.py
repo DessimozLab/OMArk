@@ -15,8 +15,37 @@
         '''
 
 from omamer.hierarchy import get_descendants, get_leaves, get_root_leaf_offsets, get_children
+from tables.exceptions import HDF5ExtError
+import omamer.database
 
 
+def check_database(dbpath):
+    #Check errors in the database parameter.
+    valid = True
+    try:
+        db = omamer.database.Database(dbpath)
+        hog_tab = db._hog_tab
+        prot_tab = db._prot_tab
+        sp_tab = db._sp_tab
+        tax_tab = db._tax_tab
+        fam_tab = db._fam_tab
+        cprot_buff = db._cprot_arr
+        tax_buff = db._ctax_arr
+        chog_buff = db._chog_arr
+        hogtax_buff = db._hog_taxa_buff
+        db.close()
+
+    except OSError:
+        print('Path to the OMAmer database is not valid.')
+        valid = False
+    except HDF5ExtError:
+        print('The OMAmer database is not a valid HDF5 file.')
+        valid = False
+    except AttributeError:
+        print('The provided HDF5 database is not a correct OMAmer database.')
+        valid = False
+        db.close()
+    return valid
 
 def get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff):
     '''
