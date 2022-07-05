@@ -12,9 +12,5 @@ A:{{'%.2f' % consistent_percent}}%[P:{{'%.2f' % consistent_partial_percent}}%,F:
 #From HOG placement, the detected species are:
 #Clade	Number of associated proteins	Percentage of proteome's total
 {{main_clade.name}}	{{main_clade.protein_nr}}	{{'%.2f' % main_clade.protein_percent}}%
-{% if contaminants | length> 0  %}
-#Potential contaminants:
-{% endif %}
-{% for cont in contaminants%}
-{{cont.name}}	{{cont.protein_nr}}	{{'%.2f' % cont.protein_percent}}%
-{% endfor %}
+{% if contaminants | length> 0  %}#Potential contaminants:{% endif %}
+{% for cont in contaminants%}{{cont.name}}	{{cont.protein_nr}}	{{'%.2f' % cont.protein_percent}}%{% endfor %}

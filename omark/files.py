@@ -163,8 +163,8 @@ def organize_results(results, results_proteomes, selected_lineage, species_repor
     inconsistent_partial_percent = 100*inconsistent_partial_nr/protein_nr
     inconsistent_fragment_percent = 100*inconsistent_fragment_nr/protein_nr
     contamination_percent = 100*contamination_nr/protein_nr
-    contamination_partial_percent = 100*contamination_nr/protein_nr
-    contamination_fragment_percent = 100*contamination_nr/protein_nr
+    contamination_partial_percent = 100*contamination_partial_nr/protein_nr
+    contamination_fragment_percent = 100*contamination_fragment_nr/protein_nr
     no_map_percent = 100*no_map_nr/protein_nr
 
     contaminants = list()
