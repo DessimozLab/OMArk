@@ -132,23 +132,27 @@ def get_species_from_taxon(taxname, tax_tab, sp_tab, tax_buff):
     return sp_tax
 
 
-def get_full_lineage_omamer(taxname, tax_tab, tax_buff = False,  descendant = False):
-    lineage = list()
+def get_full_lineage_omamer(taxnames, tax_tab, tax_buff = False,  descendant = False):
+    name_to_lineage = dict()
     tax_off2tax = tax_tab['ID']
     tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
-    reached = False
-    current_tax = tax_tab[tax2tax_off[taxname]]
-    while not reached: 
-        lineage.append(current_tax['ID'])
-        ancestor_tax = current_tax['ParentOff']
-        if ancestor_tax!=-1:
-                current_tax  = tax_tab[ancestor_tax]
-        else:
-                reached = True
-    if descendant :
+    for taxname in taxnames:
+        lineage = list()
+        reached = False
+        current_tax = tax_tab[tax2tax_off[taxname]]
+        while not reached: 
+            lineage.append(current_tax['ID'])
+            ancestor_tax = current_tax['ParentOff']
+            if ancestor_tax!=-1:
+                    current_tax  = tax_tab[ancestor_tax]
+            else:
+                    reached = True
+        if descendant :
 
-        lineage += tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'].tolist()
-    return lineage
+            lineage += tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'].tolist()
+        name_to_lineage[taxname] = lineage
+        
+    return name_to_lineage
 
 def get_name_to_taxid(taxnames, tax_tab):
     name_to_taxid = dict()

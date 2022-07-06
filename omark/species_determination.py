@@ -31,7 +31,7 @@ def check_taxid(taxid):
 
 #Get all lineages from which proteins come in the analyzed proteomes considering the HOGs where the placement was done.
 def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff):
-        #This cutoff is made to avoid some false positives. Count lineage only if more than 0.001 of its HOGs are represented
+    #This cutoff is made to avoid some false positives. Count lineage only if more than 0.001 of its HOGs are represented
     cutoff_percentage = 0.001
     #Condider only taxa with more than 2 hits
     cutoff_nb_prot = 2
@@ -100,8 +100,11 @@ def tree_from_taxlist(all_taxa, tax_tab):
     existing_node = ['LUCA']
     curr_node = t
     #Creating the tree only using lineage present in OMAmer, need to get the full lineage for this
-    for name, count  in all_taxa.items():
-        lineage = outils.get_full_lineage_omamer(name, tax_tab)
+    all_names = all_taxa.keys()
+    name_to_lineage = outils.get_full_lineage_omamer(all_names, tax_tab)
+
+    for name, count in all_taxa.items():
+        lineage = name_to_lineage[name]
         for clade in reversed(lineage):
             clade = clade.decode()
             if clade not in existing_node:
@@ -282,7 +285,8 @@ def add_taxid(placements, tax_tab):
 
 #Return the closest ancestor of a clade with more than a threshold of species in omamer
 def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff):
-    lineage = outils.get_full_lineage_omamer(clade, tax_tab)
+    name_to_lineage = outils.get_full_lineage_omamer([clade], tax_tab)
+    lineage = name_to_lineage[clade]
     for tax in lineage:
         species = outils.get_species_from_taxon(tax, tax_tab, sp_tab, tax_buff)
         if len(species)>=threshold_species:

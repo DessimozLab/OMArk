@@ -24,7 +24,8 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
     poss_hog = list()
     seen_hog = list()
     other_cl_hog = list()
-    lineage = outils.get_full_lineage_omamer(clade.encode('ascii'), tax_tab, tax_buff, True)
+    clade_to_lineage = outils.get_full_lineage_omamer([clade.encode('ascii')], tax_tab, tax_buff, True)
+    lineage = clade_to_lineage[clade.encode('ascii')]
     sp_target = outils.get_species_from_taxon(clade, tax_tab, sp_tab, tax_buff)
 
     for f in fam_tab:
