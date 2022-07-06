@@ -1,0 +1,17 @@
+#The selected clade was {{ancestral_lineage}}
+#Number of conserved HOGs is: {{cons_hog_nr}}
+#Results on conserved HOGs is:
+#S:Single:S, D:Duplicated[U:Unexpected,E:Expected],M:Missing
+S:{{single_nr}},D:{{dup_nr}}[U:{{dup_unexp_nr}},E:{{dup_exp_nr}}],M:{{missing_nr}}
+S:{{'%.2f' % single_percent}}%,D:{{'%.2f' % dup_percent}}%[U:{{'%.2f' % dup_unexp_percent}}%,E:{{'%.2f' % dup_exp_percent}}%],M:{{'%.2f' % missing_percent}}%
+#On the whole proteome, there is {{protein_nr}} proteins
+#Of which:
+#A:Accurate - placements in consistent lineage[P:Partial hits,F:Fragmented], I: Inconsistent placements[P:Partial hits,F:Fragmented], C: Likely Contamination[P:Partial hits,F:Fragmented], U: Unknown 
+A:{{consistent_nr}}[P:{{consistent_partial_nr}},F:{{consistent_fragment_nr}}],I:{{inconsistent_nr}}[P:{{inconsistent_partial_nr}},F:{{inconsistent_fragment_nr}}],C:{{contamination_nr}}[P:{{contamination_partial_nr}},F:{{contamination_fragment_nr}}],U:{{no_map_nr}}
+A:{{'%.2f' % consistent_percent}}%[P:{{'%.2f' % consistent_partial_percent}}%,F:{{'%.2f' % consistent_fragment_percent}}%],I:{{'%.2f' % inconsistent_percent}}%[P:{{'%.2f' % inconsistent_partial_percent}}%,F:{{'%.2f' %  inconsistent_fragment_percent}}%],C:{{'%.2f' % contamination_percent}}%[P:{{'%.2f' % contamination_partial_percent}}%,F:{{'%.2f' % contamination_fragment_percent}}%],U:{{'%.2f' % no_map_percent}}%
+#From HOG placement, the detected species are:
+#Clade	NCBI taxid	Number of associated proteins	Percentage of proteome's total
+{{main_clade.name}}	{{main_clade.taxid}}	{{main_clade.protein_nr}}	{{'%.2f' % main_clade.protein_percent}}%
+{% if contaminants | length> 0  %}#Potential contaminants:{% endif %}
+{% for cont in contaminants%}{{cont.name}}	{{cont.taxid}}	{{cont.protein_nr}}	{{'%.2f' % cont.protein_percent}}%
+{% endfor %}

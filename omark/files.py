@@ -15,7 +15,62 @@
         '''
 import Bio
 import re
+import jinja2   
+import os
+from omark.utils import LOG
 
+#This function is called to make sure the input file correspond to OMArk assumption.
+#It return a boolean consisting of whether an errror was detected and print the reason for
+#errors
+def check_omamerfile(omamerfile):
+    expected_headers = ['qseqid','hogid','overlap', 'family-score','subfamily-score','qseqlen','subfamily-medianseqlen']
+    try:
+        with open(omamerfile,'r') as f:
+            firstline = f.readline()
+            cat = firstline.strip('\n').split('\t')
+            if cat!=expected_headers:
+                LOG.error('The input OMAmer file is not well formated. Check that your OMAmer version is >=2.2.')
+                return False
+    except FileNotFoundError:
+        LOG.error('The path to the OMAMer file is not valid.')
+        return False
+    return True
+
+def check_FASTA(fasta_file):
+    try:
+        with open(fasta_file, "r") as handle:
+            fasta = Bio.SeqIO.parse(handle, "fasta")
+            if not any(fasta):  # False when `fasta` is empty, i.e. wasn't a FASTA file
+                LOG.error("The FASTA was not in the correct format or was empty.")
+                return False
+    except FileNotFoundError:
+            LOG.error('The path to the FASTA file is not valid.')
+            return False
+    return True
+
+def check_isoform_file(isoform_file):
+    try:
+        with open(isoform_file,'r') as f:
+            pass
+    except FileNotFoundError:
+        LOG.error('The path to the isoform file is no valid.')
+        return False
+    return True
+
+def check_and_create_output_folder(stordir):
+
+    if os.path.isdir(stordir):
+        return True
+    else:
+        try:
+            os.mkdir(stordir)
+        except FileNotFoundError:
+            LOG.error('The path to the output directory is not valid (Its parent directory does not exist).')
+            return False
+        except PermissionError:
+            LOG.error('No permission to write to the output directory path. Please check permissions.')
+            return False
+    return True
 
 #This function read an OMAmer file (input_) and output two variables:
 #alldata -> A list of all OMAmer placement, containing a dictionary correspoding to all of the OMAmer data results
@@ -38,6 +93,43 @@ def parseOmamer(file):
                 continue
             alldata.append(data)
     return alldata, not_mapped 
+
+def parse_isoform_file(file):
+    isoform_by_gene = list()
+    with open(file) as handle:
+        for line in handle.readlines():
+            line = line.strip('\n')
+            splice = line.split(";")
+            isoform_by_gene.append(splice)
+    return isoform_by_gene
+
+
+def select_isoform(isoform_data, alldata):
+    indexed_data = {x['qseqid'] : x for x in alldata}
+    best_scoring_isoforms = list()
+    selected_isoforms = list()
+    not_mapped_gene = list()
+    for gene in isoform_data:
+        main_variant = None
+        best_score = 0
+
+        for isoform in gene:
+            omamer_res = indexed_data.get(isoform)
+            if omamer_res:
+
+                score = float(omamer_res['family-score'])*min(int(omamer_res['qseqlen']),int(omamer_res['subfamily-medianseqlen']))
+                if score > best_score:
+                    best_score = score
+                    main_variant = omamer_res
+        if main_variant != None:
+            best_scoring_isoforms.append(main_variant)
+            selected_isoforms.append(isoform)
+        else:
+            #If there is no main variant, we have no way to select the best isoform. We select one by default, here the latest appearing in the FASTA file
+            not_mapped_gene.append(isoform)
+            selected_isoforms.append(isoform)
+    return best_scoring_isoforms, not_mapped_gene, selected_isoforms
+
 
 #This function remove sequences that only match partially to HOGs of interests,
 #in order to consider only the most robust placement.
@@ -65,6 +157,121 @@ def store_results(storfile, results):
             for elem in hoglist:
                 storage.write(elem+'\n')
 
+def store_list(storfile, data):
+
+    with open(storfile, 'w') as storage:
+        for elem in data:
+            storage.write(elem+'\n')
+
+
+
+
+def write_templated_report(template_file, storfile, results, results_proteomes, selected_lineage, species_report):
+
+    env = jinja2.Environment(
+    loader= jinja2.PackageLoader("omark", "assets"),
+    autoescape=jinja2.select_autoescape()
+    )
+    template =  env.get_template(template_file)
+
+    all_stats = organize_results(results, results_proteomes, selected_lineage, species_report)
+
+    with open(storfile, 'w') as outfile:
+        outfile.write(template.render(all_stats))
+
+
+#This function create a detailed dictionnary of all OMArk stats, by post-processing the results of the different analysis.
+def organize_results(results, results_proteomes, selected_lineage, species_report):
+
+    ancestral_lineage = selected_lineage.decode()
+
+
+    single_nr = len(results['Single'])+len(results['Overspecific_S'])+len(results['Underspecific'])
+    dup_nr = len(results['Duplicated'])+ len(results['Overspecific_D'])
+    dup_exp_nr = len(results['Overspecific_D'])
+    dup_unexp_nr = len(results['Duplicated'])
+    missing_nr = len(results['Lost'])
+    cons_hog_nr = single_nr+dup_nr+ missing_nr
+    single_percent = 100*single_nr/cons_hog_nr
+    dup_percent = 100*dup_nr/cons_hog_nr
+    dup_exp_percent = 100*dup_exp_nr/cons_hog_nr
+    dup_unexp_percent = 100*dup_unexp_nr/cons_hog_nr
+    missing_percent = 100*missing_nr/cons_hog_nr
+
+
+    consistent_nr =  len(results_proteomes['Correct'])
+    consistent_partial_nr = len(results_proteomes['Correct_Partial'])
+    consistent_fragment_nr = len(results_proteomes['Correct_Fragment'])
+    inconsistent_nr =  len(results_proteomes['Erroneous'])
+    inconsistent_partial_nr = len(results_proteomes['Erroneous_Partial'])
+    inconsistent_fragment_nr = len(results_proteomes['Erroneous_Fragment'])
+    contamination_nr = len(results_proteomes['Contamination'])
+    contamination_partial_nr = len(results_proteomes['Contamination_Partial'])
+    contamination_fragment_nr = len(results_proteomes['Contamination_Fragment'])
+    no_map_nr = len(results_proteomes['Not_Placed'])
+    protein_nr = consistent_nr + inconsistent_nr + contamination_nr + no_map_nr
+    
+    consistent_percent = 100*consistent_nr/protein_nr
+    consistent_partial_percent = 100*consistent_partial_nr/protein_nr
+    consistent_fragment_percent = 100*consistent_fragment_nr/protein_nr
+    inconsistent_percent = 100*inconsistent_nr/protein_nr
+    inconsistent_partial_percent = 100*inconsistent_partial_nr/protein_nr
+    inconsistent_fragment_percent = 100*inconsistent_fragment_nr/protein_nr
+    contamination_percent = 100*contamination_nr/protein_nr
+    contamination_partial_percent = 100*contamination_partial_nr/protein_nr
+    contamination_fragment_percent = 100*contamination_fragment_nr/protein_nr
+    no_map_percent = 100*no_map_nr/protein_nr
+
+    contaminants = list()
+    main = True
+    for values in species_report:     
+        species_info = {"name" : values[0], "protein_nr" : values[2], "protein_percent" : 100*values[2]/protein_nr, 'taxid': values[3]}
+        if main:
+            main_clade = species_info
+            main = False
+        else:
+            contaminants.append(species_info)
+    all_stats = {  "ancestral_lineage" : ancestral_lineage,
+                        "cons_hog_nr" : cons_hog_nr,
+                        "single_nr" : single_nr, 
+                        "dup_nr" : dup_nr,
+                        "dup_exp_nr" : dup_exp_nr,
+                        "dup_unexp_nr" : dup_unexp_nr,
+                        "missing_nr" : missing_nr,
+                        "single_percent" : single_percent,
+                        "dup_percent": dup_percent,
+                        "dup_exp_percent" : dup_exp_percent,
+                        "dup_unexp_percent" : dup_unexp_percent,
+                        "missing_percent" : missing_percent,
+                        "protein_nr" : protein_nr,
+                        "consistent_nr" : consistent_nr,
+                        "consistent_partial_nr" : consistent_partial_nr,
+                        "consistent_fragment_nr" : consistent_fragment_nr,
+                        "inconsistent_nr" : inconsistent_nr,
+                        "inconsistent_partial_nr" : inconsistent_partial_nr,
+                        "inconsistent_fragment_nr" : inconsistent_fragment_nr,
+                        "contamination_nr" : contamination_nr,
+                        "contamination_partial_nr" : contamination_partial_nr,
+                        "contamination_fragment_nr" : contamination_fragment_nr,
+                        "no_map_nr" : no_map_nr,
+                        "consistent_percent" : consistent_percent,
+                        "consistent_partial_percent" : consistent_partial_percent,
+                        "consistent_fragment_percent" : consistent_fragment_percent,
+                        "inconsistent_percent" : inconsistent_percent,
+                        "inconsistent_partial_percent" : inconsistent_partial_percent,
+                        "inconsistent_fragment_percent" : inconsistent_fragment_percent,
+                        "contamination_percent" : contamination_percent,
+                        "contamination_partial_percent"  : contamination_partial_percent,
+                        "contamination_fragment_percent" : contamination_fragment_percent,
+                        "no_map_percent" : no_map_percent,
+                        "main_clade" : main_clade,
+                        "contaminants" : contaminants }
+    return all_stats
+
+
+
+
+#Function to write the OMArk .sum file. Deprecated and replaced by the more gene 'write_templated_report'
 def store_summary(storfile, results, results_proteomes, selected_lineage, contaminant = False, prot_clade = False):
     with open(storfile,'w') as storage:
         storage.write('#The selected clade was '+selected_lineage.decode()+"\n")
@@ -92,6 +299,7 @@ def store_summary(storfile, results, results_proteomes, selected_lineage, contam
                 storage.write('\t'.join([str(x) for x in values])+'\n')
                 count+=1
                 #storage.write('\t'+str(len(prot_clade[values[0]][0][2]))+'\n')
+
 
 def store_contaminant_FASTA(stordir, basefile_name, prot_clade, original_FASTA_file):
     seqs_by_id = dict()

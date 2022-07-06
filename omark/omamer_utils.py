@@ -15,8 +15,37 @@
         '''
 
 from omamer.hierarchy import get_descendants, get_leaves, get_root_leaf_offsets, get_children
+from tables.exceptions import HDF5ExtError
+import omamer.database
+from omark.utils import LOG
 
+def check_database(dbpath):
+    #Check errors in the database parameter.
+    valid = True
+    try:
+        db = omamer.database.Database(dbpath)
+        hog_tab = db._hog_tab
+        prot_tab = db._prot_tab
+        sp_tab = db._sp_tab
+        tax_tab = db._tax_tab
+        fam_tab = db._fam_tab
+        cprot_buff = db._cprot_arr
+        tax_buff = db._ctax_arr
+        chog_buff = db._chog_arr
+        hogtax_buff = db._hog_taxa_buff
+        db.close()
 
+    except OSError:
+        LOG.error('Path to the OMAmer database is not valid.')
+        valid = False
+    except HDF5ExtError:
+        LOG.error('The OMAmer database is not a valid HDF5 file.')
+        valid = False
+    except AttributeError:
+        LOG.error('The provided HDF5 database is not a correct OMAmer database.')
+        valid = False
+        db.close()
+    return valid
 
 def get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff):
     '''
@@ -103,23 +132,37 @@ def get_species_from_taxon(taxname, tax_tab, sp_tab, tax_buff):
     return sp_tax
 
 
-def get_full_lineage_omamer(taxname, tax_tab, tax_buff = False,  descendant = False):
-    lineage = list()
+def get_full_lineage_omamer(taxnames, tax_tab, tax_buff = False,  descendant = False):
+    name_to_lineage = dict()
     tax_off2tax = tax_tab['ID']
     tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
-    reached = False
-    current_tax = tax_tab[tax2tax_off[taxname]]
-    while not reached: 
-        lineage.append(current_tax['ID'])
-        ancestor_tax = current_tax['ParentOff']
-        if ancestor_tax!=-1:
-                current_tax  = tax_tab[ancestor_tax]
-        else:
-                reached = True
-    if descendant :
+    for taxname in taxnames:
+        lineage = list()
+        reached = False
+        current_tax = tax_tab[tax2tax_off[taxname]]
+        while not reached: 
+            lineage.append(current_tax['ID'])
+            ancestor_tax = current_tax['ParentOff']
+            if ancestor_tax!=-1:
+                    current_tax  = tax_tab[ancestor_tax]
+            else:
+                    reached = True
+        if descendant :
 
-        lineage += tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'].tolist()
-    return lineage
+            lineage += tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'].tolist()
+        name_to_lineage[taxname] = lineage
+        
+    return name_to_lineage
+
+def get_name_to_taxid(taxnames, tax_tab):
+    name_to_taxid = dict()
+    tax_off2tax = tax_tab['ID']
+    tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
+    for name in taxnames:
+        tax = tax_tab[tax2tax_off[name.encode()]]
+        taxid = tax['TaxID']
+        name_to_taxid[name] = taxid
+    return name_to_taxid
 
 def get_ancestral_HOGs(hog, hog_tab, chog_buff):
     all_hogs = list()
