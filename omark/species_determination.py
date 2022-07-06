@@ -270,6 +270,14 @@ def reorganized_placement(placements, prot_by_clade):
     new_placements.sort(key = lambda x: x[2], reverse=True)
     return new_placements
 
+def add_taxid(placements, tax_tab):
+    all_sp_name = [x[0] for x in placements]
+    #Get the correspondance species name/taxid
+    name_to_taxid = outils.get_name_to_taxid(all_sp_name, tax_tab)
+    #Add the taxid at the end of each clade descriptor list
+    new_placements = [(x[0],x[1], x[2], name_to_taxid[x[0]]) for x in placements]
+    return new_placements
+
 
 
 #Return the closest ancestor of a clade with more than a threshold of species in omamer

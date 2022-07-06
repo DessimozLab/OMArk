@@ -225,7 +225,7 @@ def organize_results(results, results_proteomes, selected_lineage, species_repor
     contaminants = list()
     main = True
     for values in species_report:     
-        species_info = {"name" : values[0], "protein_nr" : values[2], "protein_percent" : 100*values[2]/protein_nr}
+        species_info = {"name" : values[0], "protein_nr" : values[2], "protein_percent" : 100*values[2]/protein_nr, 'taxid': values[3]}
         if main:
             main_clade = species_info
             main = False

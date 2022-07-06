@@ -10,7 +10,8 @@ S:{{'%.2f' % single_percent}}%,D:{{'%.2f' % dup_percent}}%[U:{{'%.2f' % dup_unex
 A:{{consistent_nr}}[P:{{consistent_partial_nr}},F:{{consistent_fragment_nr}}],I:{{inconsistent_nr}}[P:{{inconsistent_partial_nr}},F:{{inconsistent_fragment_nr}}],C:{{contamination_nr}}[P:{{contamination_partial_nr}},F:{{contamination_fragment_nr}}],U:{{no_map_nr}}
 A:{{'%.2f' % consistent_percent}}%[P:{{'%.2f' % consistent_partial_percent}}%,F:{{'%.2f' % consistent_fragment_percent}}%],I:{{'%.2f' % inconsistent_percent}}%[P:{{'%.2f' % inconsistent_partial_percent}}%,F:{{'%.2f' %  inconsistent_fragment_percent}}%],C:{{'%.2f' % contamination_percent}}%[P:{{'%.2f' % contamination_partial_percent}}%,F:{{'%.2f' % contamination_fragment_percent}}%],U:{{'%.2f' % no_map_percent}}%
 #From HOG placement, the detected species are:
-#Clade	Number of associated proteins	Percentage of proteome's total
-{{main_clade.name}}	{{main_clade.protein_nr}}	{{'%.2f' % main_clade.protein_percent}}%
+#Clade	NCBI taxid	Number of associated proteins	Percentage of proteome's total
+{{main_clade.name}}	{{main_clade.taxid}}	{{main_clade.protein_nr}}	{{'%.2f' % main_clade.protein_percent}}%
 {% if contaminants | length> 0  %}#Potential contaminants:{% endif %}
-{% for cont in contaminants%}{{cont.name}}	{{cont.protein_nr}}	{{'%.2f' % cont.protein_percent}}%{% endfor %}
+{% for cont in contaminants%}{{cont.name}}	{{cont.taxid}}	{{cont.protein_nr}}	{{'%.2f' % cont.protein_percent}}%
+{% endfor %}

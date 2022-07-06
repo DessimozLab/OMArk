@@ -150,6 +150,16 @@ def get_full_lineage_omamer(taxname, tax_tab, tax_buff = False,  descendant = Fa
         lineage += tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'].tolist()
     return lineage
 
+def get_name_to_taxid(taxnames, tax_tab):
+    name_to_taxid = dict()
+    tax_off2tax = tax_tab['ID']
+    tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
+    for name in taxnames:
+        tax = tax_tab[tax2tax_off[name.encode()]]
+        taxid = tax['TaxID']
+        name_to_taxid[name] = taxid
+    return name_to_taxid
+
 def get_ancestral_HOGs(hog, hog_tab, chog_buff):
     all_hogs = list()
     hog_off = hog['ParentOff'] 

@@ -67,8 +67,10 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         prot_clade = spd.get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
         contaminant_prots = spd.get_contaminant_proteins(placements, prot_clade)
         #Reorganize the placements to consider the species with most proteins to be the main one. (Needed in edge cases where the proteins of the contaminant
-        #is an exhaustive set)
+        #is an exhaustive set).
         placements = spd.reorganized_placement(placements, prot_clade)
+        #Add the taxid information to the species description list.
+        placements = spd.add_taxid(placements, tax_tab)
 
         #Procedure when the user do not give taxonomu information. Will use the main species from the placement
         if taxid==None:
