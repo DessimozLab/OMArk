@@ -23,7 +23,7 @@ setup(
     url='https://github.com/DessimozLab/omark',
     description=desc,
     long_description=readme,
-    long_description_content_type="markdown",
+    long_description_content_type="text/markdown",
     packages=find_packages(),
     package_data={'omark':['assets/*.txt']},
     include_package_data=True,
