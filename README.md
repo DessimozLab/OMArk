@@ -23,6 +23,16 @@ Required arguments: ``-f (--file)``, ``-d (--database)``
 
     usage :python omark.py [-h] [-f FILE] [-d DATABASE] [-o OUTPUTFOLDER] [-t TAXID] [-of OG_FASTA]
 
+## Arguments
+| Flag                                                         | Default         | Description                                                                                                                                                 |
+|:-------------------------------------------------------------|:----------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [``-f`` ``--file``](#markdown-header--file)                  |                 | Path to an OMAmer search output file                                                                                                                        |
+| [``-d`` ``--db``](#markdown-header--database)                |                 | Path to an OMAmer database                                                                                                                                  |
+| [``-o`` ``--outputFolder``](#markdown-header--outputFolder)  | ./omark_output/ | Path to the folder into which OMArk results will be output. OMArk will create it if it does not exist.                                                      |
+| [``-t`` ``--taxid``](#markdown-header--taxid)                | None            | NCBI taxid corresponding to the input proteome (Optional).                                                                                                  |
+| [``-of`` ``--og_fasta``](#markdown-header--og_fasta)         | None            | The original proteomes file. Provide if you want optional FASTA file to be outputted by OMArk (Sequences by categories, sequences by detected species, etc) |
+| [``-i``, ``--isoform_file``](#markdown-header--isoform_file) | None            | A semi-colon separated file, listing all isoforms of each genes, with one gene per line. Use if your input proteome include more than one protein per gene. |
+| [``-v`` ``--verbose``](#markdown-header--verbose)            | False           | Turn on logging information about OMArk progress.                                                                                                           |
 
 ## Output
 
