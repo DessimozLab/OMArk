@@ -17,7 +17,7 @@
 from omamer.hierarchy import get_descendants, get_leaves, get_root_leaf_offsets, get_children
 from tables.exceptions import HDF5ExtError
 import omamer.database
-
+from omark.utils import LOG
 
 def check_database(dbpath):
     #Check errors in the database parameter.
@@ -36,13 +36,13 @@ def check_database(dbpath):
         db.close()
 
     except OSError:
-        print('Path to the OMAmer database is not valid.')
+        LOG.error('Path to the OMAmer database is not valid.')
         valid = False
     except HDF5ExtError:
-        print('The OMAmer database is not a valid HDF5 file.')
+        LOG.error('The OMAmer database is not a valid HDF5 file.')
         valid = False
     except AttributeError:
-        print('The provided HDF5 database is not a correct OMAmer database.')
+        LOG.error('The provided HDF5 database is not a correct OMAmer database.')
         valid = False
         db.close()
     return valid

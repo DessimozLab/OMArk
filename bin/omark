@@ -33,13 +33,13 @@ def build_arg_parser():
     parser.add_argument('-t', '--taxid', type=int, help='Taxonomic identifier', default=None)
     parser.add_argument('-of', '--og_fasta', type=str, help='Original FASTA file', default=None)
     parser.add_argument('-i', '--isoform_file', type=str, help='A semi-colon separated file, listing all isoforoms of each genes, with one gene per line.', default=None)
+    parser.add_argument('-v', '--verbose', help='Turn on logging information about OMArk process', action='store_true')
+
     return parser
 
 
 if __name__=='__main__':
 	
-    print('Setting up')
     parser = build_arg_parser()  
     arg = parser.parse_args()
     omark.launcher(arg)
-    print('Done')

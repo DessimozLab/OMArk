@@ -17,6 +17,7 @@ import Bio
 import re
 import jinja2   
 import os
+from omark.utils import LOG
 
 #This function is called to make sure the input file correspond to OMArk assumption.
 #It return a boolean consisting of whether an errror was detected and print the reason for
@@ -28,10 +29,10 @@ def check_omamerfile(omamerfile):
             firstline = f.readline()
             cat = firstline.strip('\n').split('\t')
             if cat!=expected_headers:
-                print('The input OMAmer file is not well formated. Check that your OMAmer version is >=2.2.')
+                LOG.error('The input OMAmer file is not well formated. Check that your OMAmer version is >=2.2.')
                 return False
     except FileNotFoundError:
-        print('The path to the OMAMer file is not valid.')
+        LOG.error('The path to the OMAMer file is not valid.')
         return False
     return True
 
@@ -40,10 +41,10 @@ def check_FASTA(fasta_file):
         with open(fasta_file, "r") as handle:
             fasta = Bio.SeqIO.parse(handle, "fasta")
             if not any(fasta):  # False when `fasta` is empty, i.e. wasn't a FASTA file
-                print("The FASTA was not in the correct format or was empty.")
+                LOG.error("The FASTA was not in the correct format or was empty.")
                 return False
     except FileNotFoundError:
-            print('The path to the FASTA file is not valid.')
+            LOG.error('The path to the FASTA file is not valid.')
             return False
     return True
 
@@ -52,7 +53,7 @@ def check_isoform_file(isoform_file):
         with open(isoform_file,'r') as f:
             pass
     except FileNotFoundError:
-        print('The path to the isoform file is no valid.')
+        LOG.error('The path to the isoform file is no valid.')
         return False
     return True
 
@@ -64,10 +65,10 @@ def check_and_create_output_folder(stordir):
         try:
             os.mkdir(stordir)
         except FileNotFoundError:
-            print('The path to the output directory is not valid (Its parent directory does not exist).')
+            LOG.error('The path to the output directory is not valid (Its parent directory does not exist).')
             return False
         except PermissionError:
-            print('No permission to write to the output directory path. Please check permissions.')
+            LOG.error('No permission to write to the output directory path. Please check permissions.')
             return False
     return True
 

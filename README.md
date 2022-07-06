@@ -30,7 +30,9 @@ Required arguments: ``-f (--file)``, ``-d (--database)``
 | [``-d`` ``--db``](#markdown-header--database)||Path to an OMAmer database
 | [``-o`` ``--outputFolder``](#markdown-header--outputFolder)|'./omark_output/'|Path to the folder into which OMArk results will be output. OMArk will create it if it does not exist.
 | [``-t`` ``--taxid``](#markdown-header--taxid)|None| NCBI taxid corresponding to the input proteome (Optionnal).
-| [``-of`` ``-og_fasta``](#markdown-header--og_fasta)|None| The original proteomes file. Provide if you want optionnal FASTA file to be outputted by Omark (Sequences by categories, sequences by detected species, etc)
+| [``-of`` ``--og_fasta``](#markdown-header--og_fasta)|None| The original proteomes file. Provide if you want optionnal FASTA file to be outputted by Omark (Sequences by categories, sequences by detected species, etc)
+| [``-i``, ``--isoform_file``](#markdown-header--isoform_file)|None|A semi-colon separated file, listing all isoforoms of each genes, with one gene per line. Use if your input proteome include more than one protein per gene.
+| [``-v`` ``--verbose``](#markdown-header--verbose)|False|Turn on logging information about OMArk progress.
 
 ## Output
 

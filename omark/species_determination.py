@@ -16,8 +16,8 @@
 
 from omamer.hierarchy import get_descendants
 import ete3
-import omark.omamer_utils as utils
-
+import omark.omamer_utils as outils
+from omark.utils import LOG
 
 # Check whether the taxid seem to exist in the NCBI database (Using the get_lineage function)
 def check_taxid(taxid):
@@ -25,7 +25,7 @@ def check_taxid(taxid):
             ncbi = ete3.NCBITaxa()
             linid = ncbi.get_lineage(taxid)
         except ValueError:
-            print('The provided taxid is not found in the NCBI database')
+            LOG.error('The provided taxid is not found in the NCBI database')
             return False
         return True
 
@@ -43,8 +43,8 @@ def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff
 
     #Consider only taxa in which at least one percent of the registered HOGs has a hit
     all_taxa_perc = dict()
-    hog_by_tax = utils.get_nb_hogs_by_clade(hog_tab, tax_tab)
-    proportion_hog_dup = utils.get_prop_duplicated(hog_tab, tax_tab, chog_buff)
+    hog_by_tax = outils.get_nb_hogs_by_clade(hog_tab, tax_tab)
+    proportion_hog_dup = outils.get_prop_duplicated(hog_tab, tax_tab, chog_buff)
     for k, v in filter_all_tax.items():
         all_taxa_perc[k] = float(v)/float(hog_by_tax[k])
     all_taxa_perc = {k: v for k, v in sorted(all_taxa_perc.items(), key=lambda item: item[1], reverse=True)}
@@ -52,7 +52,7 @@ def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff
 
     #Create a tree with all target lineages and uses it to find likely taxa mixture
     t =tree_from_taxlist(filter_all_taxa_perc, tax_tab )
-    tax_to_spec = utils.get_spec_by_tax(tax_tab, sp_tab, tax_buff)
+    tax_to_spec = outils.get_spec_by_tax(tax_tab, sp_tab, tax_buff)
     all_plac  = get_likely_spec(t,filter_all_taxa_perc,filter_all_tax, tax_to_spec, proportion_hog_dup)
 
     return all_plac
@@ -74,7 +74,7 @@ def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, al
         if omamapping['hogid'] == 'na':
             continue    
         hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
-        taxa = utils.get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
+        taxa = outils.get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
         if not allow_hog_redun:
             if omamapping['hogid'] in seen_hogs:
                 continue
@@ -101,7 +101,7 @@ def tree_from_taxlist(all_taxa, tax_tab):
     curr_node = t
     #Creating the tree only using lineage present in OMAmer, need to get the full lineage for this
     for name, count  in all_taxa.items():
-        lineage = utils.get_full_lineage_omamer(name, tax_tab)
+        lineage = outils.get_full_lineage_omamer(name, tax_tab)
         for clade in reversed(lineage):
             clade = clade.decode()
             if clade not in existing_node:
@@ -226,7 +226,7 @@ def get_HOGs_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, all
         if omamapping['hogid'] == 'na':
             continue    
         hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
-        taxa = utils.get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
+        taxa = outils.get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
         if not allow_hog_redun:
             if omamapping['hogid'] in seen_hogs:
                 continue
@@ -274,9 +274,9 @@ def reorganized_placement(placements, prot_by_clade):
 
 #Return the closest ancestor of a clade with more than a threshold of species in omamer
 def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff):
-    lineage = utils.get_full_lineage_omamer(clade, tax_tab)
+    lineage = outils.get_full_lineage_omamer(clade, tax_tab)
     for tax in lineage:
-        species = utils.get_species_from_taxon(tax, tax_tab, sp_tab, tax_buff)
+        species = outils.get_species_from_taxon(tax, tax_tab, sp_tab, tax_buff)
         if len(species)>=threshold_species:
               return tax
     return None
@@ -295,7 +295,7 @@ def find_taxa_from_ncbi(lineage, tax_tab, sp_tab, tax_buff):
         spec  = []
         for tax in reversed(lineage):
                 try:
-                    spec = utils.get_species_from_taxon(tax, tax_tab, sp_tab,tax_buff)
+                    spec = outils.get_species_from_taxon(tax, tax_tab, sp_tab,tax_buff)
                 except KeyError:
                     continue
                 if len(spec)>=1:
