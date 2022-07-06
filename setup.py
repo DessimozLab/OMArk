@@ -17,7 +17,7 @@ setup(
     version=__version__,
     author='Yannis Nevers',
     email='yannis.nevers@unil.ch',
-    url='https://github.com/YanNevers/omark',
+    url='https://github.com/DessimozLab/omark',
     description=desc,
     packages=find_packages(),
     package_data={'omark':['assets/*.txt']},
