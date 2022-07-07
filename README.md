@@ -5,7 +5,11 @@ OMArk rely on the OMA orthology database, from which it exploits orthology relat
 
 ## Installation
 
-You can use OMArk by cloning this repository and installing it manually with your Python installer.
+You can use OMArk by installing the package through PyPi:
+
+``pip install omark``
+
+Or by cloning this repository and installing it manually with your Python installer.
 
 Example command from the git directory:
 ``python setup.py install``
@@ -14,14 +18,15 @@ or
 
 You can then use it on your Python environment by calling it as a command line tool.
 OMArk rely on an OMAmer database to run. For all OMArk features to work correctly, it is better for this database to cover a wide range of species.
-We recommend using one constructed from the whole OMA database. You can download one manually on this link : [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6462027.svg)](https://doi.org/10.5281/zenodo.6462027)File :  OMAmerDB.tar.gz
+We recommend using one constructed from the whole OMA database. You can download one manually on this link : [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6462027.svg)](https://doi.org/10.5281/zenodo.6462027) - File :OMAmerDB.tar.gz
 
 
-##Usage
+## Usage
 
 Required arguments: ``-f (--file)``, ``-d (--database)``
 
-    usage :python omark.py [-h] [-f FILE] [-d DATABASE] [-o OUTPUTFOLDER] [-t TAXID] [-of OG_FASTA]
+    usage: omark [-h] -f FILE -d DATABASE [-o OUTPUTFOLDER] [-t TAXID] [-of OG_FASTA] [-i ISOFORM_FILE] [-v]
+
 
 ## Arguments
 | Flag                                                         | Default         | Description                                                                                                                                                 |
@@ -46,17 +51,19 @@ These commented files reports:
 * The whole proteome quality assessment results (Consistent placements, Inconsistent Placements, Contaminants, Missing genes)
 * The species and contaminant detected in the proteome
 
+The file with the .pdf extension is a graphical representation of the completeness and whole proteome quality assesment.
+
 The file with the .tax extension indicate: the closest taxonomic lineage in the OMA database and the selected reference lineage.
 
 The file with the .omq extension recapitulates the HOGs identifier used in the completeness analysis, and the category to which they were attributed.
 
 The file with the .ump extensions recapitulates the identifier for all proteins that were not mapped in OMAmer.
 
-##Example
+## Example
 
 You can run OMArk on an example files stored on the example\_data folder. Remember to download an OMAmer databqse as indicated in the installation section.
 
-First: you can run OMAmer on the proteome FASTA. (For more documentation about installing OMAmer: see its [Github](https://raw.githubusercontent.com/DessimozLab/omamer)
+First: you can run OMAmer on the proteome FASTA. (For more documentation about installing OMAmer: see its [Github](https://github.com/DessimozLab/omamer)
 This step should take less than 15 minutes.
 
 	omamer search --db  LUCA.h5 --query example_data/UP000005640_9606.fasta  --score sensitive --out example_data/UP000005640_9606.omamer
