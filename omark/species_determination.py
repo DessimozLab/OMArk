@@ -145,8 +145,9 @@ def get_likely_spec(t, score, numb, tax_to_spec, prop_inherited):
             if child[3]<=1:
                 low_depth += 1
 
+
     #If there is only one possibility, and there are no multiple possibilities at a low level directly below
-    if len(qualified)==1 or (len(qualified)>1 and low_depth <=1):
+    if len(qualified)==1 or (len(qualified)>1 and ( (not ( low_depth>0 and len(cur_sp)<20)) and (not (low_depth==len(qualified))))):
         
         for qual in qualified:
             qname = qual[0]
@@ -272,6 +273,22 @@ def reorganized_placement(placements, prot_by_clade):
         new_placements.append((clname,clade[1],count))
     new_placements.sort(key = lambda x: x[2], reverse=True)
     return new_placements
+
+def reorganize_placements_from_taxid(placements, likely_clade,tax_tab, tax_buff):
+    max_overlap = 0
+    best_fit = list()
+    all_clades = [likely_clade] + [x[0].encode() for x in placements]
+    lineages = outils.get_full_lineage_omamer(all_clades, tax_tab, tax_buff, False)
+
+    main_lineage = set(lineages[likely_clade])
+    for candidate in placements:
+        candidate_lineage = set(lineages[candidate[0].encode()])
+        overlap = len(main_lineage.intersection(candidate_lineage))
+        if overlap>max_overlap:
+            max_overlap = overlap
+            best_fit = candidate
+    placements = [best_fit] + [x for x in placements if x!=best_fit]
+    return placements
 
 def add_taxid(placements, tax_tab):
     all_sp_name = [x[0] for x in placements]

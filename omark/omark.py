@@ -62,16 +62,14 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         LOG.info('Determinating species composition from HOG placements')
 
         #Determine species and contamination
-        placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)      
+        placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)  
+
         #Get the proteins placed in species correspoding to each placement in a dictionary
         prot_clade = spd.get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)
-        contaminant_prots = spd.get_contaminant_proteins(placements, prot_clade)
         #Reorganize the placements to consider the species with most proteins to be the main one. (Needed in edge cases where the proteins of the contaminant
         #is an exhaustive set).
         placements = spd.reorganized_placement(placements, prot_clade)
-        #Add the taxid information to the species description list.
-        placements = spd.add_taxid(placements, tax_tab)
-
+        
         #Procedure when the user do not give taxonomu information. Will use the main species from the placement
         if taxid==None:
 
@@ -82,7 +80,15 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         else :
             lin = spd.get_lineage_ncbi(taxid)
             likely_clade = spd.find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
+            #Used in case the placement main species conflict with the given taxid, will chose the given clade as reference
+            placements = spd.reorganize_placements_from_taxid(placements, likely_clade,tax_tab, tax_buff)
             LOG.info('A taxid was provided. The query taxon is '+likely_clade.decode())
+
+        #Get the proteins beloning to contaminants
+        contaminant_prots = spd.get_contaminant_proteins(placements, prot_clade)
+        #Add the taxid information to the species description list.
+        placements = spd.add_taxid(placements, tax_tab)
+
 
         #Get the first parent of the chosen clade with at least 5 species
         closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff)
