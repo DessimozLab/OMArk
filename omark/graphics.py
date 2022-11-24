@@ -41,37 +41,37 @@ def plot_omark_results(format_filename_dict, results, results_proteomes, fragmen
 	axes[0].bar(x=['a'],height=miss, bottom = single+dup, label='Missing', color=MISSING, alpha=.99)
 	axes[0].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=11)
 
-	total_proteomes = len(results_proteomes['Not_Placed'])+len(results_proteomes['Correct'])+len(results_proteomes['Contamination'])+len(results_proteomes['Erroneous'])
-	correct = 100*len(results_proteomes['Correct'])/total_proteomes
+	total_proteomes = len(results_proteomes['Unknown'])+len(results_proteomes['Consistent'])+len(results_proteomes['Contamination'])+len(results_proteomes['Inconsistent'])
+	correct = 100*len(results_proteomes['Consistent'])/total_proteomes
 	cont = 100*len(results_proteomes['Contamination'])/total_proteomes
-	incorrect = 100*len(results_proteomes['Erroneous'])/total_proteomes
-	nomap = 100*len(results_proteomes['Not_Placed'])/total_proteomes
+	incorrect = 100*len(results_proteomes['Inconsistent'])/total_proteomes
+	nomap = 100*len(results_proteomes['Unknown'])/total_proteomes
 	axes[1].set_ylim(0,100)
 	custom_legend = []
 	if fragment_info:
 
-		correct_partial = 100*len(results_proteomes['Correct_Partial'])/total_proteomes
-		correct_fragment = 100*len(results_proteomes['Correct_Fragment'])/total_proteomes
+		correct_partial = 100*len(results_proteomes['Consistent_Partial'])/total_proteomes
+		correct_fragment = 100*len(results_proteomes['Consistent_Fragment'])/total_proteomes
 		correct_full = correct-(correct_partial+correct_fragment)
-		incorrect_partial = 100*len(results_proteomes['Erroneous_Partial'])/total_proteomes
-		incorrect_fragment = 100*len(results_proteomes['Erroneous_Fragment'])/total_proteomes
+		incorrect_partial = 100*len(results_proteomes['Inconsistent_Partial'])/total_proteomes
+		incorrect_fragment = 100*len(results_proteomes['Inconsistent_Fragment'])/total_proteomes
 		incorrect_full = incorrect-(incorrect_partial+incorrect_fragment)
 		cont_partial = 100*len(results_proteomes['Contamination_Partial'])/total_proteomes
 		cont_fragment = 100*len(results_proteomes['Contamination_Fragment'])/total_proteomes
 		cont_full = cont-(cont_partial+cont_fragment)
 
 		axes[1].bar(x=['a'],height=correct_full, label='Consistent', color= CONSISTENT, alpha=.99)
-		axes[1].bar(x=['a'],height=correct_partial, bottom = correct_full, hatch='///', color= CONSISTENT, edgecolor='darkslategray', lw=0.1, alpha=.99)
-		axes[1].bar(x=['a'],height=correct_fragment, bottom=correct_full+correct_partial, hatch='///', color= CONSISTENT, edgecolor='whitesmoke', lw=0.1, alpha=.99)
+		axes[1].bar(x=['a'],height=correct_partial, bottom = correct_full, hatch='///', color= CONSISTENT, edgecolor='darkslategray', lw='0.1', alpha=.99)
+		axes[1].bar(x=['a'],height=correct_fragment, bottom=correct_full+correct_partial, hatch='///', color= CONSISTENT, edgecolor='whitesmoke', lw='0.1', alpha=.99)
 		axes[1].bar(x=['a'],height=cont_full, bottom = correct,label='Contaminant', color= CONTAMINATION, alpha=.99)
-		axes[1].bar(x=['a'],height=cont_partial, bottom = correct+cont_full, hatch='///', color= CONTAMINATION, edgecolor='darkslategray', lw=0.1, alpha=.99)
-		axes[1].bar(x=['a'],height=cont_fragment, bottom = correct+cont_full+cont_partial, hatch='///', color= CONTAMINATION, edgecolor='whitesmoke', lw=0.1, alpha=.99)
+		axes[1].bar(x=['a'],height=cont_partial, bottom = correct+cont_full, hatch='///', color= CONTAMINATION, edgecolor='darkslategray', lw='0.1', alpha=.99)
+		axes[1].bar(x=['a'],height=cont_fragment, bottom = correct+cont_full+cont_partial, hatch='///', color= CONTAMINATION, edgecolor='whitesmoke', lw='0.1', alpha=.99)
 		axes[1].bar(x=['a'],height=incorrect_full, bottom =correct+cont,label='Inconsistent', color= INCONSISTENT, alpha=.99)
-		axes[1].bar(x=['a'],height=incorrect_partial, bottom = correct+cont+incorrect_full, hatch='///', color= INCONSISTENT, edgecolor='darkslategray', lw=0.1, alpha=.99)
-		axes[1].bar(x=['a'],height=incorrect_fragment, bottom = correct+cont+incorrect_full+incorrect_partial, hatch='///', color= INCONSISTENT, edgecolor='whitesmoke', lw=0.1, alpha=.99)
+		axes[1].bar(x=['a'],height=incorrect_partial, bottom = correct+cont+incorrect_full, hatch='///', color= INCONSISTENT, edgecolor='darkslategray', lw='0.1', alpha=.99)
+		axes[1].bar(x=['a'],height=incorrect_fragment, bottom = correct+cont+incorrect_full+incorrect_partial, hatch='///', color= INCONSISTENT, edgecolor='whitesmoke', lw='0.1', alpha=.99)
 
-		partial_patch = mpatches.Patch(facecolor='whitesmoke',lw=0.1, hatch='///', edgecolor='darkslategray', label='Partial mapping', alpha=.99)
-		fragment_patch = mpatches.Patch(facecolor='darkslategray',lw=0.1, hatch='///', edgecolor='whitesmoke', label='Fragments', alpha=.99)
+		partial_patch = mpatches.Patch(facecolor='whitesmoke',lw='0.1', hatch='///', edgecolor='darkslategray', label='Partial mapping', alpha=.99)
+		fragment_patch = mpatches.Patch(facecolor='darkslategray',lw='0.1', hatch='///', edgecolor='whitesmoke', label='Fragments', alpha=.99)
 
 		custom_legend = [partial_patch,fragment_patch]
 
@@ -83,8 +83,8 @@ def plot_omark_results(format_filename_dict, results, results_proteomes, fragmen
 	axes[1].legend(handles=axes[1].get_legend_handles_labels()[0]+custom_legend, loc='center left', bbox_to_anchor=(1, 0.5), fontsize=11)
 
 	xticks = axes[1].xaxis.get_major_ticks()
-	axes[0].set_ylabel('Proportion of conserved HOGs', fontsize=11)
-	axes[1].set_ylabel('Proportion of proteomes', fontsize=11)
+	axes[0].set_ylabel('Pergentage of conserved HOGs', fontsize=11)
+	axes[1].set_ylabel('Percentage of proteome', fontsize=11)
 	axes[0].get_xaxis().set_visible(False,)
 	axes[1].get_xaxis().set_visible(False,)
 

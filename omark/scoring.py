@@ -161,16 +161,19 @@ def score_whole_proteome(found_clade, not_in_clade, partials, fragments, not_map
 
     proteome_res = dict()
 
-    proteome_res['Correct'] = found_clade
+    proteome_res['Consistent'] = found_clade
     confirmed_contaminants = set(not_in_clade).intersection(set(contaminants))
     proteome_res['Contamination'] = confirmed_contaminants
     misplaced = set(not_in_clade) - set(confirmed_contaminants)
-    proteome_res['Erroneous'] = misplaced
-    proteome_res['Correct_Partial'] = set(found_clade).intersection(set(partials))
-    proteome_res['Correct_Fragment'] =set(found_clade).intersection(set(fragments))
-    proteome_res['Erroneous_Partial'] = set(misplaced).intersection(set(partials))
-    proteome_res['Erroneous_Fragment'] =set(misplaced).intersection(set(fragments))
+    proteome_res['Inconsistent'] = misplaced
+    proteome_res['Consistent_Partial'] = set(found_clade).intersection(set(partials))
+    proteome_res['Consistent_Fragment'] =set(found_clade).intersection(set(fragments))
+    proteome_res['Consistent_Full'] = set(found_clade).difference(proteome_res['Consistent_Partial'].union(proteome_res['Consistent_Fragment']))
+    proteome_res['Inconsistent_Partial'] = set(misplaced).intersection(set(partials))
+    proteome_res['Inconsistent_Fragment'] =set(misplaced).intersection(set(fragments))
+    proteome_res['Inconsistent_Full'] = set(misplaced).difference(proteome_res['Inconsistent_Partial'].union(proteome_res['Inconsistent_Fragment']))
     proteome_res['Contamination_Partial'] = set(confirmed_contaminants).intersection(set(partials))
     proteome_res['Contamination_Fragment'] =set(confirmed_contaminants).intersection(set(fragments))
-    proteome_res['Not_Placed'] = not_mapped
+    proteome_res['Contamination_Full'] = set(confirmed_contaminants).difference(proteome_res['Contamination_Partial'].union(proteome_res['Contamination_Fragment']))
+    proteome_res['Unknown'] = not_mapped
     return proteome_res

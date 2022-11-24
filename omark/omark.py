@@ -104,10 +104,9 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
 
         cladehog = cladehog + lineage_rhog
 
-        LOG.info(str(len(cladehog))+' HOGs are associated to the query ancestral lineage')
-        LOG.info(str(len(conshog))+' conserved ancestral HOGs will be used from completeness computation')
+        LOG.info(str(len(cladehog))+" HOGs are associated to the query's lineage and will be used for consistency assesment")
+        LOG.info(str(len(conshog))+' conserved ancestral HOGs will be used from completeness assesment')
 
-        #Two modes? : Normal and listing unexpected protein mapping?
         LOG.info('Comparing the query gene repertoire to lineage-associated HOGs')
         wholeres, found_clade, nic = sc.found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
         res_proteomes = sc.score_whole_proteome(found_clade, nic, partials, fragments, not_mapped, contaminant_prots)
@@ -132,7 +131,10 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         if isoform_file:
             io.store_list(stordir+'/'+basefile+"_selected_isoforms.txt", selected_isoforms)
         #Write results files
-        io.store_results(stordir+'/'+basefile+".ump", {'Unmapped' : not_mapped, 'UnClade' : nic})
+        io.store_results(stordir+'/'+basefile+".ump", { key : res_proteomes[key] for key in ['Consistent_Full', 'Consistent_Partial', 'Consistent_Fragment',
+                                                                                             'Inconsistent_Full', 'Inconsistent_Partial', 'Inconsistent_Fragment',
+                                                                                             'Contamination_Full', 'Contamination_Partial', 'Contamination_Fragment',
+                                                                                             'Unknown']})
         io.store_results(stordir+'/'+basefile+".omq", res_completeness) 
 
         io.write_templated_report('summarized_report.txt', stordir+'/'+basefile+".sum", res_completeness, res_proteomes, closest_corr, placements)

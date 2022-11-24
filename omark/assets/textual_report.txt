@@ -1,4 +1,4 @@
-COMPLETENESS
+COMPLETENESS ASSESSMENT
 ------------
 #This benchmark gives an estimate of the completeness of the gene set based on the presence or not of conserved genes of the target lineage.
 #Conserved genes are defined using Hierarchical Orthologous Groups (HOGs) defined at a certain taxonomic clade, which is a proxy for the ancestral gene repertoire of this clade. HOGs are considered conserved if they have at least one gene in >80% of the extant species. 
@@ -16,7 +16,7 @@ Duplicated, Expected: {{dup_exp_nr}} ({{'%.2f' % dup_exp_percent}}%)
 Missing: {{missing_nr}} ({{'%.2f' % missing_percent}}%)
 
 
-WHOLE PROTEOME ASSESSMENT
+CONSISTENCY ASSESSMENT
 -------------------------
 #This benchmark gives the proportion of annotated protein-coding genes in the query proteome that likely correspond to an actual protein-coding gene by comparing to the known gene families of the selected ancestral lineage.
 

@@ -199,16 +199,16 @@ def organize_results(results, results_proteomes, selected_lineage, species_repor
     missing_percent = 100*missing_nr/cons_hog_nr
 
 
-    consistent_nr =  len(results_proteomes['Correct'])
-    consistent_partial_nr = len(results_proteomes['Correct_Partial'])
-    consistent_fragment_nr = len(results_proteomes['Correct_Fragment'])
-    inconsistent_nr =  len(results_proteomes['Erroneous'])
-    inconsistent_partial_nr = len(results_proteomes['Erroneous_Partial'])
-    inconsistent_fragment_nr = len(results_proteomes['Erroneous_Fragment'])
+    consistent_nr =  len(results_proteomes['Consistent'])
+    consistent_partial_nr = len(results_proteomes['Consistent_Partial'])
+    consistent_fragment_nr = len(results_proteomes['Consistent_Fragment'])
+    inconsistent_nr =  len(results_proteomes['Inconsistent'])
+    inconsistent_partial_nr = len(results_proteomes['Inconsistent_Partial'])
+    inconsistent_fragment_nr = len(results_proteomes['Inconsistent_Fragment'])
     contamination_nr = len(results_proteomes['Contamination'])
     contamination_partial_nr = len(results_proteomes['Contamination_Partial'])
     contamination_fragment_nr = len(results_proteomes['Contamination_Fragment'])
-    no_map_nr = len(results_proteomes['Not_Placed'])
+    no_map_nr = len(results_proteomes['Unknown'])
     protein_nr = consistent_nr + inconsistent_nr + contamination_nr + no_map_nr
     
     consistent_percent = 100*consistent_nr/protein_nr
@@ -268,37 +268,6 @@ def organize_results(results, results_proteomes, selected_lineage, species_repor
                         "contaminants" : contaminants }
     return all_stats
 
-
-
-
-#Function to write the OMArk .sum file. Deprecated and replaced by the more gene 'write_templated_report'
-def store_summary(storfile, results, results_proteomes, selected_lineage, contaminant = False, prot_clade = False):
-    with open(storfile,'w') as storage:
-        storage.write('#The selected clade was '+selected_lineage.decode()+"\n")
-        total = len(results['Single'])+len(results['Duplicated'])+ len(results['Overspecific_S']) + len(results['Overspecific_D'])+ len(results['Underspecific']) + len(results['Lost'])
-        storage.write('#Number of conserved HOGs is: '+str(total)+'\n')
-        tot_genes = len(results_proteomes['Not_Placed'])+len(results_proteomes['Contamination'])+len(results_proteomes['Correct'])+len(results_proteomes['Erroneous'])
-        storage.write('#Results on conserved HOGs is:\n')
-        storage.write('#S:Single:S, D:Duplicated[U:Unexpected,E:Expected],M:Missing\n')
-        storage.write(f'S:{len(results["Single"])+len(results["Overspecific_S"])+len(results["Underspecific"])},D:{len(results["Duplicated"])+len(results["Overspecific_D"])}[U:{len(results["Duplicated"])},E:{len(results["Overspecific_D"])}],M:{len(results["Lost"])}\n') 
-        storage.write(f'S:{100*(len(results["Single"])+len(results["Overspecific_S"])+len(results["Underspecific"]))/total:4.2f}%,D:{100*(len(results["Duplicated"])+len(results["Overspecific_D"]))/total:4.2f}%[U:{100*len(results["Duplicated"])/total:4.2f}%,E:{100*len(results["Overspecific_D"])/total:4.2f}%],M:{100*len(results["Lost"])/total:4.2f}%\n') 
-        storage.write('#On the whole proteome, there is '+str(tot_genes)+' proteins\n')
-        storage.write('#Of which:\n')
-        storage.write('#A:Placements in accurate lineage[P:Partial hits,F:Fragmented], E: Erroneous placements[P:Partial hits,F:Fragmented], C: Likely contamination[P:Partial hits,F:Fragmented], N: no mapping \n')
-        storage.write(f'A:{len(results_proteomes["Correct"])}[P:{len(results_proteomes["Correct_Partial"])},F:{len(results_proteomes["Correct_Fragment"])}],E:{len(results_proteomes["Erroneous"])}[P:{len(results_proteomes["Erroneous_Partial"])},F:{len(results_proteomes["Erroneous_Fragment"])}],C:{len(results_proteomes["Contamination"])}[P:{len(results_proteomes["Contamination_Partial"])},F:{len(results_proteomes["Contamination_Fragment"])}],N:{len(results_proteomes["Not_Placed"])}\n')
-        storage.write(f'A:{100*len(results_proteomes["Correct"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Correct_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Correct_Fragment"])/tot_genes:4.2f}%],E:{100*len(results_proteomes["Erroneous"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Erroneous_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Erroneous_Fragment"])/tot_genes:4.2f}%],C:{100*len(results_proteomes["Contamination"])/tot_genes:4.2f}%[P:{100*len(results_proteomes["Contamination_Partial"])/tot_genes:4.2f}%,F:{100*len(results_proteomes["Contamination_Fragment"])/tot_genes:4.2f}%],N:{100*len(results_proteomes["Not_Placed"])/tot_genes:4.2f}%\n')
-        #storage.write(f'C:{100*len(found_cons)/tot_genes:4.2f}%,L:{100*(len(nicons)-len(nic))/tot_genes:4.2f}%,O:{100*len(nic)/tot_genes:4.2f}%,U:{100*len(unmap)/tot_genes:4.2f}%\n')
-        if contaminant:
-            storage.write('#From HOG placement, the detected species are:\n')
-            storage.write("#Clade\tPercentage of clade's HOGs\tNumber of associated proteins\n")
-
-            count=0
-            for values in contaminant:
-                if count==1:
-                    storage.write('#Including possible contaminant:\n')
-                storage.write('\t'.join([str(x) for x in values])+'\n')
-                count+=1
-                #storage.write('\t'+str(len(prot_clade[values[0]][0][2]))+'\n')
 
 
 def store_contaminant_FASTA(stordir, basefile_name, prot_clade, original_FASTA_file):

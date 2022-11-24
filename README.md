@@ -57,7 +57,7 @@ The file with the .tax extension indicate: the closest taxonomic lineage in the 
 
 The file with the .omq extension recapitulates the HOGs identifier used in the completeness analysis, and the category to which they were attributed.
 
-The file with the .ump extensions recapitulates the identifier for all proteins that were not mapped in OMAmer.
+The file with the .ump extensions recapitulates the identifier for all proteins by category in which they werre placed.
 
 ## Example
 
@@ -66,7 +66,7 @@ You can run OMArk on an example files stored on the example\_data folder. Rememb
 First: you can run OMAmer on the proteome FASTA. (For more documentation about installing OMAmer: see its [Github](https://github.com/DessimozLab/omamer)
 This step should take less than 15 minutes.
 
-	omamer search --db  LUCA.h5 --query example_data/UP000005640_9606.fasta  --score sensitive --out example_data/UP000005640_9606.omamer
+	omamer search --db  LUCA.h5 --query example_data/UP000005640_9606.fasta --out example_data/UP000005640_9606.omamer
 
 Then, use OMArk (Should take less than 10 minutes) after creating an empty output folder:
 
@@ -75,3 +75,7 @@ Then, use OMArk (Should take less than 10 minutes) after creating an empty outpu
 	omark -f example_data/UP000005640_9606.omamer -d LUCA.h5 -o example_data/omark_output
 
 You can now explore OMArk results in the ``omark_output`` folder
+
+## Webserver
+
+Omark is available as a public webserver at <https://omark.omabrowser.org/home/> where users are free to upload proteome and run the OMArk pipeline. OMArk results can then be viewed side-to-side with precomputed results on closely related species, as is the recommended use case for OMArk. Precomputed results available on the webserver are based on UniProt Reference Proteomes.
