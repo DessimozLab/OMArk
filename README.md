@@ -18,7 +18,7 @@ or
 
 You can then use it on your Python environment by calling it as a command line tool.
 OMArk rely on an OMAmer database to run. For all OMArk features to work correctly, it is better for this database to cover a wide range of species.
-We recommend using one constructed from the whole OMA database. You can download one manually on this link : [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6462027.svg)](https://doi.org/10.5281/zenodo.6462027) - File :OMAmerDB.tar.gz
+We recommend using one constructed from the whole OMA database. You can download one manually on this link : [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7359861.svg)](https://doi.org/10.5281/zenodo.7359861) - File :OMAmerDB.tar.gz
 
 
 ## Usage
