@@ -46,6 +46,8 @@ def build_arg_parser():
 #The second element is a list of dictionnary, with one entry per contaminant. The list is empty if there is no detected contaminant
 def parse_sum_file(sumfile):
 
+    filebase = re.sub(r'\.sum$', '', os.path.basename(sumfile))
+
     main_data = dict()
     with open(sumfile) as omaqsum:
             in_cont = False
@@ -61,8 +63,8 @@ def parse_sum_file(sumfile):
 
                     if resultline:
                         results = resultline
-                        main_data['Filename'] = os.path.basename(sumfile).strip('.sum')
-                        main_data['Species name'] = os.path.basename(sumfile).strip('.sum')
+                        main_data['Filename'] = filebase
+                        main_data['Species name'] = filebase
 
                         main_data['Complete'] = float(resultline.group(1))+float(resultline.group(2))
                         main_data['Single'] = float(resultline.group(1))
@@ -101,7 +103,7 @@ def parse_sum_file(sumfile):
             contaminant_data = list()
             if len(detected_species)>1:
                 for sup_detect_species in detected_species[1:]:
-                    contaminant_data.append({'Filename': os.path.basename(sumfile).strip('.sum'), 'Species name': os.path.basename(sumfile).strip('.sum'), 'Main_Taxon' : detected_species[0][0], 'Contaminant' : sup_detect_species[0],
+                    contaminant_data.append({'Filename': filebase, 'Species name': filebase, 'Main_Taxon' : detected_species[0][0], 'Contaminant' : sup_detect_species[0],
                                         'Contaminant_Taxid': sup_detect_species[1], 'Number_of_Proteins' : sup_detect_species[2]  })
     return main_data, contaminant_data
 
