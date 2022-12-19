@@ -76,16 +76,16 @@ Then, use OMArk (Should take less than 10 minutes) after creating an empty outpu
 
 You can now explore OMArk results in the ``omark_output`` folder
 
-## Visualizing multiple OMArk results
+## Visualising multiple OMArk results
 
-We include a script for visualizating OMArk results on multiple dataset. This script is available on the utils folder of the repository under the name: plot_all_results.py . You can also use an interactive version of this script as a Jupyter Notebook (Explore_data.ipynb). Note the Notebook needs the plot_all_results.py as dependancy and should be downloaded alongside it. 
+We include a script for visualising OMArk results of multiple datasets. This script is available on the utils folder of the repository under the name: ``plot_all_results.py``. You can also use an interactive version of this script as a Jupyter Notebook (Explore_data.ipynb). Note the Notebook needs the plot_all_results.py as dependency and should be downloaded alongside it.
 
 You can use the plotting script with following command:
 
 	plot_all_results.py -i example_data/omark_output -o fig.png
  
-Note that by default it will use the prefix of the .sum file present in the OMArk folders as label. You can override this behaviour and provide more data by providing a mapping file (-m) option formatted as the ``mapping_template.txt`` file in the same folder. There you can chose to provide a Species name and a NCBI identifier for each result (Note: The filename column must be equal to the prefix of the .sum file for the mapping to be succesful). 
-If you do so and provid taxonomic information as part of the additionnal data, you can also chose to order the data according to the NCBI taxonomy using the -t option. 
+Note that by default it will use the prefix of the .sum file present in the OMArk folders as label. You can override this behaviour and provide more data by providing a mapping file (-m) option formatted as the ``mapping_template.txt`` file in the same folder. There you can choose to provide a Species name and a NCBI identifier for each result (Note: The filename column must be equal to the prefix of the .sum file for the mapping to be successful). 
+If you do so and provide taxonomic information as part of the additional data, you can also choose to order the data according to the NCBI taxonomy using the -t option. 
 
 ## Webserver
 

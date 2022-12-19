@@ -13,11 +13,17 @@
             GNU Lesser General Public License for more details.
             You should have received a copy of the GNU Lesser General Public License
             along with OMArk. If not, see <http://www.gnu.org/licenses/>.
-        '''
+'''
 
-'''This scripts is meant to help with dataexploration and creation of plot with OMArk results from multiple species. As input, it needs a folder containing all of OMArk output folder.
-It will identify the summarized result file and read (.sum). By default, the filename prefix will be used as species name in the plot. You can override thi behavious by providing a mapping file where the file prefix is associated with a file name. Optionally, you can provide a TaxId and order the data according to their taxonomic classification. This script is provided
-with a compinon Jupyter Notebook that allows more plotting parameters and data vizualisation as a pandas Dataframe.'''
+'''
+This scripts is meant to help with data exploration and creation of plot with OMArk results from multiple species.
+As input, it needs a folder containing all of OMArk output folders.
+It will identify the summarised result file and read (.sum).
+By default, the filename prefix will be used as species name in the plot.
+You can override this behaviour by providing a mapping file where the file prefix is associated with a file name.
+Optionally, you can provide a TaxId and order the data according to their taxonomic classification.
+This script is provided with a companion Jupyter Notebook that allows more plotting parameters and data visualisation as a pandas Dataframe.
+'''
 
 import pandas as pd
 import os
@@ -34,10 +40,10 @@ def build_arg_parser():
     -----------
     A parser object with the chosen option and parameters"""
 
-    parser = argparse.ArgumentParser(description="Generate a multiple plot for all OMArk folder in a given path..")   
-    parser.add_argument('-i', '--input', type=str, help="Folder with OMArk results", required=True)   
-    parser.add_argument('-o', '--output', type=str, help="Path to the figure to be outputed.", default="./omark_multiple.png")
-    parser.add_argument('-m', '--mapping', type=str, help="Path to a mapping file. Mapping file shoud be in the tsv format and have an header that list Filename, Species name and TaxId. Filename should indicate the prefix of the sum file. Refer to the template for example.", default=None)
+    parser = argparse.ArgumentParser(description="Generate a multiple species plot for all OMArk folder in a given path.")
+    parser.add_argument('-i', '--input', type=str, help="Folder with OMArk results.", required=True)
+    parser.add_argument('-o', '--output', type=str, help="Path to the figure to be outputted (PNG format).", default="./omark_multiple.png")
+    parser.add_argument('-m', '--mapping', type=str, help="Path to a mapping file. Mapping file shoud be in the tsv format and have a header that lists 'Filename', 'Species name' and 'TaxId'. Filename should indicate the prefix of the sum file. Refer to the template for example.", default=None)
     parser.add_argument('-t', '--taxonomy', help="Flag whether the data should be ranked by taxonomy order. Only works if the TaxId is provided in the mapping file.", action='store_true')
 
     return parser
@@ -45,6 +51,8 @@ def build_arg_parser():
 #Parse a summary file from OMArk and return a tuple representing the data. First element of the tuple is a Dictionnary containing all OMArk metrics about the proteome of interest. 
 #The second element is a list of dictionnary, with one entry per contaminant. The list is empty if there is no detected contaminant
 def parse_sum_file(sumfile):
+
+    filebase = re.sub(r'\.sum$', '', os.path.basename(sumfile))
 
     main_data = dict()
     with open(sumfile) as omaqsum:
@@ -61,8 +69,8 @@ def parse_sum_file(sumfile):
 
                     if resultline:
                         results = resultline
-                        main_data['Filename'] = os.path.basename(sumfile).strip('.sum')
-                        main_data['Species name'] = os.path.basename(sumfile).strip('.sum')
+                        main_data['Filename'] = filebase
+                        main_data['Species name'] = filebase
 
                         main_data['Complete'] = float(resultline.group(1))+float(resultline.group(2))
                         main_data['Single'] = float(resultline.group(1))
@@ -101,7 +109,7 @@ def parse_sum_file(sumfile):
             contaminant_data = list()
             if len(detected_species)>1:
                 for sup_detect_species in detected_species[1:]:
-                    contaminant_data.append({'Filename': os.path.basename(sumfile).strip('.sum'), 'Species name': os.path.basename(sumfile).strip('.sum'), 'Main_Taxon' : detected_species[0][0], 'Contaminant' : sup_detect_species[0],
+                    contaminant_data.append({'Filename': filebase, 'Species_name': filebase, 'Main_Taxon' : detected_species[0][0], 'Contaminant' : sup_detect_species[0],
                                         'Contaminant_Taxid': sup_detect_species[1], 'Number_of_Proteins' : sup_detect_species[2]  })
     return main_data, contaminant_data
 
