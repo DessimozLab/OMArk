@@ -61,17 +61,17 @@ def plot_omark_results(format_filename_dict, results, results_proteomes, fragmen
 		cont_full = cont-(cont_partial+cont_fragment)
 
 		axes[1].bar(x=['a'],height=correct_full, label='Consistent', color= CONSISTENT, alpha=.99)
-		axes[1].bar(x=['a'],height=correct_partial, bottom = correct_full, hatch='///', color= CONSISTENT, edgecolor='darkslategray', lw='0.1', alpha=.99)
-		axes[1].bar(x=['a'],height=correct_fragment, bottom=correct_full+correct_partial, hatch='///', color= CONSISTENT, edgecolor='whitesmoke', lw='0.1', alpha=.99)
+		axes[1].bar(x=['a'],height=correct_partial, bottom = correct_full, hatch='///', color= CONSISTENT, edgecolor='darkslategray', lw=0.1, alpha=.99)
+		axes[1].bar(x=['a'],height=correct_fragment, bottom=correct_full+correct_partial, hatch='///', color= CONSISTENT, edgecolor='whitesmoke', lw=0.1, alpha=.99)
 		axes[1].bar(x=['a'],height=cont_full, bottom = correct,label='Contaminant', color= CONTAMINATION, alpha=.99)
-		axes[1].bar(x=['a'],height=cont_partial, bottom = correct+cont_full, hatch='///', color= CONTAMINATION, edgecolor='darkslategray', lw='0.1', alpha=.99)
-		axes[1].bar(x=['a'],height=cont_fragment, bottom = correct+cont_full+cont_partial, hatch='///', color= CONTAMINATION, edgecolor='whitesmoke', lw='0.1', alpha=.99)
+		axes[1].bar(x=['a'],height=cont_partial, bottom = correct+cont_full, hatch='///', color= CONTAMINATION, edgecolor='darkslategray', lw=0.1, alpha=.99)
+		axes[1].bar(x=['a'],height=cont_fragment, bottom = correct+cont_full+cont_partial, hatch='///', color= CONTAMINATION, edgecolor='whitesmoke', lw=0.1, alpha=.99)
 		axes[1].bar(x=['a'],height=incorrect_full, bottom =correct+cont,label='Inconsistent', color= INCONSISTENT, alpha=.99)
-		axes[1].bar(x=['a'],height=incorrect_partial, bottom = correct+cont+incorrect_full, hatch='///', color= INCONSISTENT, edgecolor='darkslategray', lw='0.1', alpha=.99)
-		axes[1].bar(x=['a'],height=incorrect_fragment, bottom = correct+cont+incorrect_full+incorrect_partial, hatch='///', color= INCONSISTENT, edgecolor='whitesmoke', lw='0.1', alpha=.99)
+		axes[1].bar(x=['a'],height=incorrect_partial, bottom = correct+cont+incorrect_full, hatch='///', color= INCONSISTENT, edgecolor='darkslategray', lw=0.1, alpha=.99)
+		axes[1].bar(x=['a'],height=incorrect_fragment, bottom = correct+cont+incorrect_full+incorrect_partial, hatch='///', color= INCONSISTENT, edgecolor='whitesmoke', lw=0.1, alpha=.99)
 
-		partial_patch = mpatches.Patch(facecolor='whitesmoke',lw='0.1', hatch='///', edgecolor='darkslategray', label='Partial mapping', alpha=.99)
-		fragment_patch = mpatches.Patch(facecolor='darkslategray',lw='0.1', hatch='///', edgecolor='whitesmoke', label='Fragments', alpha=.99)
+		partial_patch = mpatches.Patch(facecolor='whitesmoke',lw=0.1, hatch='///', edgecolor='darkslategray', label='Partial mapping', alpha=.99)
+		fragment_patch = mpatches.Patch(facecolor='darkslategray',lw=0.1, hatch='///', edgecolor='whitesmoke', label='Fragments', alpha=.99)
 
 		custom_legend = [partial_patch,fragment_patch]
 
