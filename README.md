@@ -17,8 +17,8 @@ or
 ``pip install .``
 
 You can then use it on your Python environment by calling it as a command line tool.
-OMArk rely on an OMAmer database to run. For all OMArk features to work correctly, it is better for this database to cover a wide range of species.
-We recommend using one constructed from the whole OMA database. You can download one manually on this link : [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7359861.svg)](https://doi.org/10.5281/zenodo.7359861) - File :OMAmerDB.tar.gz
+OMArk rely on an OMAmer database to run. For all OMArk features to work correctly, it is recommended for this database to cover a wide range of species. Thus we recommend using one constructed from the whole OMA database (Often named: LUCA.h5). Using one from a more restricted taxonomic range (Metazoa, Viridiplantae, Primates) would limit the ability of OMArk to detect contamination or to identify sequences and species that belong outside this range. Such a database, up-to-data with the latest OMA release, is available through the Download>Current release section of the OMA Browser, as the [LUCA.h5](https://omabrowser.org/All/LUCA.h5) file.
+Alternatively, a similar database is available through: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7359861.svg)](https://doi.org/10.5281/zenodo.7359861) - File :OMAmerDB.gz. This database corresponds to the LUCA.h5 database from the December 2021 release of the OMA database and is the one used in the analysis of the OMArk [preprint](https://www.biorxiv.org/content/10.1101/2022.11.25.517970v1).
 
 
 ## Usage
