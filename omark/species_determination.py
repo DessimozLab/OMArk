@@ -96,13 +96,13 @@ def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, al
 
 def tree_from_taxlist(all_taxa, tax_tab):
 
-    t = ete3.Tree(name='LUCA')
-    existing_node = ['LUCA']
-    curr_node = t
     #Creating the tree only using lineage present in OMAmer, need to get the full lineage for this
     all_names = all_taxa.keys()
     name_to_lineage = outils.get_full_lineage_omamer(all_names, tax_tab)
-
+    oldest_ancestor = name_to_lineage[list(all_names)[0]][-1].decode()
+    t = ete3.Tree(name=oldest_ancestor)
+    existing_node = [oldest_ancestor]
+    curr_node = t
     for name, count in all_taxa.items():
         lineage = name_to_lineage[name]
         for clade in reversed(lineage):
