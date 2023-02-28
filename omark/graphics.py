@@ -83,7 +83,7 @@ def plot_omark_results(format_filename_dict, results, results_proteomes, fragmen
 	axes[1].legend(handles=axes[1].get_legend_handles_labels()[0]+custom_legend, loc='center left', bbox_to_anchor=(1, 0.5), fontsize=11)
 
 	xticks = axes[1].xaxis.get_major_ticks()
-	axes[0].set_ylabel('Pergentage of conserved HOGs', fontsize=11)
+	axes[0].set_ylabel('Percentage of conserved HOGs', fontsize=11)
 	axes[1].set_ylabel('Percentage of proteome', fontsize=11)
 	axes[0].get_xaxis().set_visible(False,)
 	axes[1].get_xaxis().set_visible(False,)
