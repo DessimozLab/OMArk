@@ -13,8 +13,7 @@ Or by cloning this repository and installing it manually with your Python instal
 
 Example command from the git directory:
 ``pip install .``
-or
-``python setup.py install``  
+
 
 You can then use it on your Python environment by calling it as a command line tool.
 
