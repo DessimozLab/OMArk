@@ -84,12 +84,11 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
             placements = spd.reorganize_placements_from_taxid(placements, likely_clade,tax_tab, tax_buff)
             LOG.info('A taxid was provided. The query taxon is '+likely_clade.decode())
 
-        #Get the proteins beloning to contaminants
+        #Get the proteins belonging to contaminants
         contaminant_prots = spd.get_contaminant_proteins(placements, prot_clade)
         #Add the taxid information to the species description list.
         placements = spd.add_taxid(placements, tax_tab)
-
-
+        placements = spd.add_uncertain_contaminants(placements, prot_clade)
         #Get the first parent of the chosen clade with at least 5 species
         closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff)
 
@@ -136,7 +135,6 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
                                                                                              'Contamination_Full', 'Contamination_Partial', 'Contamination_Fragment',
                                                                                              'Unknown']})
         io.store_results(stordir+'/'+basefile+".omq", res_completeness) 
-
         io.write_templated_report('summarized_report.txt', stordir+'/'+basefile+".sum", res_completeness, res_proteomes, closest_corr, placements)
 
         io.write_templated_report('textual_report.txt', stordir+'/'+basefile+"_detailed_summary.txt", res_completeness, res_proteomes, closest_corr, placements)

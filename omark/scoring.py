@@ -162,6 +162,7 @@ def score_whole_proteome(found_clade, not_in_clade, partials, fragments, not_map
     proteome_res = dict()
 
     proteome_res['Consistent'] = found_clade
+    #Some possible contaminants are still counted as consistant if they are part of a HOG which contains species of the clade of interest and are defined at a common ancestor of the target species and contaminants
     confirmed_contaminants = set(not_in_clade).intersection(set(contaminants))
     proteome_res['Contamination'] = confirmed_contaminants
     misplaced = set(not_in_clade) - set(confirmed_contaminants)

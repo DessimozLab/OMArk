@@ -171,48 +171,69 @@ def get_likely_spec(t, score, numb, tax_to_spec, prop_inherited):
 def get_prot_by_clades(all_plac, omamdata, hog_tab, tax_tab, tax_buff, chog_buff):
     all_tax, prot_by_tax = get_HOGs_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff,  allow_hog_redun = True)
     t_complete = tree_from_taxlist(all_tax, tax_tab)
-    prot_clade = compute_protein_breakdowm(all_plac, t_complete, prot_by_tax)
+    prot_clade = compute_protein_breakdown(all_plac, t_complete, prot_by_tax,True)
     return prot_clade
 
 
 
-def compute_protein_breakdowm(all_plac,t, prot_by_taxa):
+def compute_protein_breakdown(all_plac,t, prot_by_taxa, include_uncertain=True):
+    #Attribute proteins to the species detected from placemebt
     prots_by_clade = dict()
+    #Lists of clades detected from placement and position in the tree
     clade_list = [ x[0] for x in all_plac]
     node_list = [t&x for x in clade_list]
     ancestor_list = list()
     for node in node_list:
-        cur_closest_ancestor = None
-        cur_depth = 0
+        all_closest_ancestor = []
         for snd_node in node_list:
-            if node!=snd_node:
-                    ca = t.get_common_ancestor(node, snd_node)
-                    depth = t.get_distance(ca)
-                    if not cur_closest_ancestor or depth>cur_depth:
-                        cur_closest_ancestor = ca
-                        cur_depth = depth
-        ancestor_list.append(cur_closest_ancestor)
+            ca = t.get_common_ancestor(node, snd_node)
+            depth = t.get_distance(ca)
+            all_closest_ancestor.append(ca)
+        #Get a list of closest common ancestor to the closest detected species
+        ancestor_list.append(all_closest_ancestor)
+
+
+    seen_nodes = list()
     for i in range(len(node_list)):
         clade = clade_list[i]
         cur_node = node_list[i]
+        f_node = node_list[i]
         ancestor = ancestor_list[i]
-        seen_nodes = list()
         level = 0
         all_prots = list()
+        included_species = [clade]
+        seen_all = False
+        while not seen_all:
+            unexplored_contaminant = False
+            if cur_node in ancestor and cur_node!=f_node:
+                for index, elem in enumerate(ancestor):
+                    if elem==cur_node:
+                        included_species.append(clade_list[index])
+                        #If all other descendant have not yet be seen, going to the next species
+                        if clade_list[index] not in seen_nodes:
+                            unexplored_contaminant = True
+            if unexplored_contaminant:
+                break
+            target_clade = included_species[0] if len(included_species)==1 else tuple(sorted(included_species))
 
-        while cur_node != ancestor:
-            all_prots.append((level, cur_node.name, prot_by_taxa.get(cur_node.name.encode(),[])))
-            seen_nodes.append(cur_node.name)
+            if (type(target_clade)==tuple and not include_uncertain) or unexplored_contaminant:
+                break
+            all_prots = prots_by_clade.get(target_clade, [])
+            if cur_node.name not in seen_nodes:
+                all_prots.append((level, cur_node.name, prot_by_taxa.get(cur_node.name.encode(),[])))
+                seen_nodes.append(cur_node.name)
             all_children = cur_node.get_descendants()
-            for node_child in all_children:
+            for node_child in all_children :
                 if node_child.name not in seen_nodes:
                     all_prots.append((level, node_child.name, prot_by_taxa.get(node_child.name.encode(),[])))
                     seen_nodes.append(node_child.name)
 
-            cur_node = cur_node.up
-            level += 1 
-        
-        prots_by_clade[clade] = all_prots
+            level += 1
+            prots_by_clade[target_clade] = all_prots
+            if cur_node.is_root():
+                seen_all = True
+            else:
+                cur_node = cur_node.up
     return prots_by_clade
 
 def get_HOGs_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, allow_hog_redun =True):
@@ -254,13 +275,29 @@ def get_HOGs_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, all
 
 def get_contaminant_proteins(placements, prot_by_clade):
     all_contaminants = list()
-    for x in placements[1:]:
-        spec = x[0]
-        for level  in prot_by_clade[spec]:
-            proteins_id = [x[1] for x in level[2]]
-            all_contaminants += proteins_id
+    main_spec = placements[0][0]
+    contaminant_spec = [x[0] for x in placements[1:]]
+    for spec_list, levels in prot_by_clade.items():
+        if not (spec_list==main_spec or (type(spec_list)==tuple and main_spec in spec_list )):
+            for level in levels:
+                proteins_id = [x[1] for x in level[2]]                
+                all_contaminants += proteins_id
     return all_contaminants
 
+def add_uncertain_contaminants(placements, prot_by_clade):
+    all_contaminants = list()
+    main_spec = placements[0][0]
+    contaminant_spec = [x[0] for x in placements[1:]]
+    count_proteins = 0 
+    for spec_list, levels in prot_by_clade.items():
+        if type(spec_list)==tuple and main_spec not in spec_list:
+            for level in levels:
+                proteins_id = [x[1] for x in level[2]]           
+                count_proteins += len(proteins_id)
+    if count_proteins!=0:
+        placements.append(('Ambiguous contaminant', 0, count_proteins, -1))
+    
+    return placements
 
 def reorganized_placement(placements, prot_by_clade):
     new_placements = list()
