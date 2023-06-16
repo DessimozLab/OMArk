@@ -88,7 +88,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         contaminant_prots = spd.get_contaminant_proteins(placements, prot_clade)
         #Add the taxid information to the species description list.
         placements = spd.add_taxid(placements, tax_tab)
-        placements = spd.add_uncertain_contaminants(placements, prot_clade)
+        placements, prot_clade = spd.add_uncertain_contaminants(placements, prot_clade)
         #Get the first parent of the chosen clade with at least 5 species
         closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff)
 

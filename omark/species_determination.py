@@ -288,16 +288,21 @@ def add_uncertain_contaminants(placements, prot_by_clade):
     all_contaminants = list()
     main_spec = placements[0][0]
     contaminant_spec = [x[0] for x in placements[1:]]
-    count_proteins = 0 
+    count_proteins = 0
+    new_prot_by_clade = {}
     for spec_list, levels in prot_by_clade.items():
         if type(spec_list)==tuple and main_spec not in spec_list:
             for level in levels:
                 proteins_id = [x[1] for x in level[2]]           
                 count_proteins += len(proteins_id)
+            cur_levels = new_prot_by_clade.get('Ambiguous_contaminant',[])
+            new_prot_by_clade['Ambiguous_contaminant'] = cur_levels+levels
+        elif type(spec_list)!=tuple:
+            new_prot_by_clade[spec_list] = levels
     if count_proteins!=0:
         placements.append(('Ambiguous contaminant', 0, count_proteins, -1))
     
-    return placements
+    return placements, new_prot_by_clade
 
 def reorganized_placement(placements, prot_by_clade):
     new_placements = list()

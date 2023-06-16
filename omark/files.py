@@ -284,8 +284,8 @@ def store_contaminant_FASTA(stordir, basefile_name, prot_clade, original_FASTA_f
                     seq = seqs_by_id[prot_data[1]]
                     seq.description = seq.description +" Level="+str(level)+" ["+clade+"]"
                     seqs_from_cont.append(seq)
-            with open(stordir+"/"+basefile_name+"_"+re.sub("[^0-9a-zA-Z]+", "_",key)+".fasta", "w") as out_handle:
-                    Bio.SeqIO.write(seqs_from_cont, out_handle, 'fasta')           
+        with open(stordir+"/"+basefile_name+"_"+re.sub("[^0-9a-zA-Z]+", "_",key)+".fasta", "w") as out_handle:
+                Bio.SeqIO.write(seqs_from_cont, out_handle, 'fasta')
 
 def store_incorrect_map_FASTA(stordir, basefile_name, not_mapped, incorrect_plac, original_FASTA_file):
     seqs_by_id = dict()
