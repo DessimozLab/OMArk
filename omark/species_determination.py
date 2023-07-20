@@ -40,7 +40,6 @@ def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff
     all_tax = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff,  allow_hog_redun =False)
     
     filter_all_tax = {key: value for (key, value) in all_tax.items() if value > cutoff_nb_prot }
-
     #Consider only taxa in which at least one percent of the registered HOGs has a hit
     all_taxa_perc = dict()
     hog_by_tax = outils.get_nb_hogs_by_clade(hog_tab, tax_tab)
@@ -49,7 +48,8 @@ def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff
         all_taxa_perc[k] = float(v)/float(hog_by_tax[k])
     all_taxa_perc = {k: v for k, v in sorted(all_taxa_perc.items(), key=lambda item: item[1], reverse=True)}
     filter_all_taxa_perc = {key: value for (key, value) in all_taxa_perc.items() if value >  cutoff_percentage}
-
+    if len(filter_all_taxa_perc)==0:
+        LOG.warning('Not enough omamer placements for automatic lineage detection. Please check your file is complete.')
     #Create a tree with all target lineages and uses it to find likely taxa mixture
     t =tree_from_taxlist(filter_all_taxa_perc, tax_tab )
     tax_to_spec = outils.get_spec_by_tax(tax_tab, sp_tab, tax_buff)
@@ -98,8 +98,11 @@ def tree_from_taxlist(all_taxa, tax_tab):
 
     #Creating the tree only using lineage present in OMAmer, need to get the full lineage for this
     all_names = all_taxa.keys()
-    name_to_lineage = outils.get_full_lineage_omamer(all_names, tax_tab)
-    oldest_ancestor = name_to_lineage[list(all_names)[0]][-1].decode()
+    if len(all_names)>0:
+        name_to_lineage = outils.get_full_lineage_omamer(all_names, tax_tab)
+        oldest_ancestor = name_to_lineage[list(all_names)[0]][-1].decode()
+    else:
+        oldest_ancestor = outils.get_root_clade(tax_tab).decode()
     t = ete3.Tree(name=oldest_ancestor)
     existing_node = [oldest_ancestor]
     curr_node = t

@@ -154,6 +154,15 @@ def get_full_lineage_omamer(taxnames, tax_tab, tax_buff = False,  descendant = F
         
     return name_to_lineage
 
+def get_root_clade(tax_tab):
+    #Get a random clade in the tax table, go up the ancestor list to find the root clade for the database. Needed when no
+    #clade pass the filter for automatic placement
+    current_tax = tax_tab[0]
+    while current_tax['ParentOff'] !=-1:
+        ancestor_tax = current_tax['ParentOff']
+        current_tax  = tax_tab[ancestor_tax]
+    return current_tax['ID']
+
 def get_name_to_taxid(taxnames, tax_tab):
     name_to_taxid = dict()
     tax_off2tax = tax_tab['ID']

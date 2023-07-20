@@ -175,7 +175,7 @@ def launcher(args):
     original_fasta = args.og_fasta
     isoform_file = args.isoform_file
     verbose = args.verbose
-    log_level = 'INFO' if verbose else 'ERROR'
+    log_level = 'INFO' if verbose else 'WARNING'
     set_log_level(log_level)
     LOG.info('Starting OMArk')
     if check_parameters(omamerfile, dbpath, outdir,taxid,original_fasta,isoform_file):
