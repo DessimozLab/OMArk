@@ -131,8 +131,12 @@ def create_df_from_results(file_list):
         if not file_found:
             #Warning: no file found for path
             pass
-    omark_df = pd.DataFrame(all_main_data)
-    cont_df = pd.DataFrame(all_cont_data)
+    omark_df = pd.DataFrame(all_main_data, columns=['Protein_number','Filename','Species name', 'Complete', 'Single', 'Duplicated','Expected_Duplicated', 
+                                         'Unexpected_Duplicated', 'Missing', 'Consistent', 'Consistent_Partially_Mapping', 'Consistent_Fragments',
+                                         'Consistent_Structurally_Consistent', 'Inconsistent', 'Inconsistent_Partially_Mapping', 'Inconsistent_Fragments',
+                                         'Inconsistent_Structurally_Consistent', 'Contaminant', 'Contaminant_Partially_Mapping', 'Contaminant_Fragments', 'Contaminant_Structurally_Consistent',
+                                         'Unknown'])
+    cont_df = pd.DataFrame(all_cont_data, columns=['Filename', 'Species_name', 'Main_Taxon', 'Contaminant', 'Contaminant_Taxid', 'Number_of_Proteins'])
 
     return omark_df, cont_df
 
