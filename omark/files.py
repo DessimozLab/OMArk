@@ -23,12 +23,14 @@ from omark.utils import LOG
 #It return a boolean consisting of whether an errror was detected and print the reason for
 #errors
 def check_omamerfile(omamerfile):
-    expected_headers = ['qseqid','hogid','overlap', 'family-score','subfamily-score','qseqlen','subfamily-medianseqlen']
+    #Two type of expected headers to be compatible with both version of OMAmer. Both OMAmer2 and 3 are suppored for now.
+    expected_headers_omamer2 = ['qseqid','hogid','overlap', 'family-score','subfamily-score','qseqlen','subfamily-medianseqlen']
+    expected_headers_omamer3 = ['qseqid' ,'hogid', 'overlap', 'family-score', 'subfamily-score', 'family-count' ,'family-normcount', 'subfamily-count', 'qseqlen', 'subfamily-medianseqlen']
     try:
         with open(omamerfile,'r') as f:
             firstline = f.readline()
             cat = firstline.strip('\n').split('\t')
-            if cat!=expected_headers:
+            if cat!=expected_headers_omamer2 and cat!=expected_headers_omamer3:
                 LOG.error('The input OMAmer file is not well formated. Check that your OMAmer version is >=2.2.')
                 return False
     except FileNotFoundError:
