@@ -40,7 +40,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
     tax_buff = db._ctax_arr[:]
     chog_buff = db._chog_arr
     hogtax_buff = db._hog_taxa_buff
-	 
+	   
     allres = dict()
 
     basefile = '.'.join(omamerfile.split('/')[-1].split('.')[:-1])
@@ -49,6 +49,13 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         LOG.info('Extracting data from input file: '+omamerfile)
 
         omamdata, not_mapped  = io.parseOmamer(omamerfile)
+
+        #Check omamer version:
+        if "family-count" in omamdata:
+            omamer_version = "0.0.3"
+        else:
+            omamer_version = "0.0.2"
+
 
         if isoform_file:
             LOG.info('An isoform_file was provided.')
@@ -62,7 +69,11 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         LOG.info('Determinating species composition from HOG placements')
 
         #Determine species and contamination
-        placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)  
+        if omamer_version == "0.0.2":
+            placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff, family_score_filter=None, cutoff_percentage=0.001)
+        else:
+            placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)
+
 
         #Get the proteins placed in species correspoding to each placement in a dictionary
         prot_clade = spd.get_prot_by_clades(placements, omamdata, hog_tab, tax_tab, tax_buff, chog_buff)

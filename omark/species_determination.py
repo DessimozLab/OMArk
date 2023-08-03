@@ -30,15 +30,16 @@ def check_taxid(taxid):
         return True
 
 #Get all lineages from which proteins come in the analyzed proteomes considering the HOGs where the placement was done.
-def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff):
+def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff, family_score_filter=70, cutoff_percentage=0.000):
     #This cutoff is made to avoid some false positives. Count lineage only if more than 0.001 of its HOGs are represented
-    cutoff_percentage = 0.001
+    cutoff_percentage = cutoff_percentage
     #Condider only taxa with more than 2 hits
     cutoff_nb_prot = 2
+    if family_score_filter:
+        omamdata= [x for x in omamdata if float(x['family-score'])>family_score_filter]
 
     #Get taxa in which placement were made with the number of placement, couting individual HOGs only once
     all_tax = get_close_taxa_omamer(omamdata, hog_tab, tax_tab, tax_buff, chog_buff,  allow_hog_redun =False)
-    
     filter_all_tax = {key: value for (key, value) in all_tax.items() if value > cutoff_nb_prot }
     #Consider only taxa in which at least one percent of the registered HOGs has a hit
     all_taxa_perc = dict()
@@ -54,7 +55,6 @@ def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff
     t =tree_from_taxlist(filter_all_taxa_perc, tax_tab )
     tax_to_spec = outils.get_spec_by_tax(tax_tab, sp_tab, tax_buff)
     all_plac  = get_likely_spec(t,filter_all_taxa_perc,filter_all_tax, tax_to_spec, proportion_hog_dup)
-
     return all_plac
 
 
@@ -142,7 +142,7 @@ def get_likely_spec(t, score, numb, tax_to_spec, prop_inherited):
 
             best_ranking = child
             max_score = child[1]
-        child_sp = tax_to_spec[child[0].encode()]
+        child_sp = tax_to_spec[child[0] .encode()]
         if child[2]>cur_numb*(prop_inherited.get(t.name.encode(), dict()).get(child[0].encode(),0))  and child[1]>cur_score*(len(child_sp)/len(cur_sp))  :
             qualified.append(child)
             if child[3]<=1:
@@ -151,17 +151,24 @@ def get_likely_spec(t, score, numb, tax_to_spec, prop_inherited):
 
     #If there is only one possibility, and there are no multiple possibilities at a low level directly below
     if len(qualified)==1 or (len(qualified)>1 and ( (not ( low_depth>0 and len(cur_sp)<20)) and (not (low_depth==len(qualified))))):
+        pass
+    #If we have multiple possibilities, will still keep those with an higher score
+    else:
+        saved_qualified = list()
+        for q in qualified:
+            if q[1]>cur_score:
+                saved_qualified.append(q)
+        qualified = saved_qualified
+    for qual in qualified:
+        qname = qual[0]
+        qscore = qual[1]
+        qnumb = qual[2]
         
-        for qual in qualified:
-            qname = qual[0]
-            qscore = qual[1]
-            qnumb = qual[2]
-            
-            qdepth = qual[3]
-            if qscore==max_score:
-                new_main = (qname, qscore, qnumb,qdepth+1)
-            else:
-                contaminants.append((qname, qscore, qnumb,qdepth+1))
+        qdepth = qual[3]
+        if qscore==max_score:
+            new_main = (qname, qscore, qnumb,qdepth+1)
+        else:
+            contaminants.append((qname, qscore, qnumb,qdepth+1))
     if not new_main:
         #There is a case where there is no selected branch, but with some qualified clade. It means the branch
         #with the most representation did not pass the threshold. In these case, we chose the current node: most general.
