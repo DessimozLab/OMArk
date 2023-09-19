@@ -16,7 +16,7 @@
 
 import argparse
 import os
-import omamer.database
+import omamer.database  
 import omark.files as io
 import omark.species_determination as spd
 import omark.omamer_utils as outils
@@ -42,7 +42,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
     hogtax_buff = db._hog_taxa_buff
 	   
     allres = dict()
-
+    
     basefile = '.'.join(omamerfile.split('/')[-1].split('.')[:-1])
     if force or not os.path.isfile(stordir+'/'+basefile+".omq"): 
         #Extract OMAmer data
@@ -51,17 +51,17 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         omamdata, not_mapped  = io.parseOmamer(omamerfile)
 
         #Check omamer version:
-        if "family-count" in omamdata:
-            omamer_version = "0.0.3"
+        if "family-count" in omamdata[0]:
+            omamer_version = "0.3.0"
         else:
-            omamer_version = "0.0.2"
+            omamer_version = "0.2.0"
 
 
         if isoform_file:
             LOG.info('An isoform_file was provided.')
             LOG.info('Extracting data from isoform file '+isoform_file)
             isoform_data = io.parse_isoform_file(isoform_file)
-            omamdata, not_mapped, selected_isoforms = io.select_isoform(isoform_data, omamdata)
+            omamdata, not_mapped, selected_isoforms = io.select_isoform(isoform_data, omamdata, omamer_version)
 
         #Get only full match for placements
         full_match_data, partials, fragments = io.filter_partial_matches(omamdata)
@@ -69,10 +69,10 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         LOG.info('Determinating species composition from HOG placements')
 
         #Determine species and contamination
-        if omamer_version == "0.0.2":
-            placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff, family_score_filter=None, cutoff_percentage=0.001)
-        else:
+        if omamer_version == "0.3.0":
             placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)
+        else:
+            placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff, family_score_filter=None, cutoff_percentage=0.001)
 
 
         #Get the proteins placed in species correspoding to each placement in a dictionary

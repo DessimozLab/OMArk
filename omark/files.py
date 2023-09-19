@@ -106,7 +106,7 @@ def parse_isoform_file(file):
     return isoform_by_gene
 
 
-def select_isoform(isoform_data, alldata):
+def select_isoform(isoform_data, alldata, omamer_version = "0.3.0"):
     indexed_data = {x['qseqid'] : x for x in alldata}
     best_scoring_isoforms = list()
     selected_isoforms = list()
@@ -118,14 +118,17 @@ def select_isoform(isoform_data, alldata):
         for isoform in gene:
             omamer_res = indexed_data.get(isoform)
             if omamer_res:
-
-                score = float(omamer_res['family-score'])*min(int(omamer_res['qseqlen']),int(omamer_res['subfamily-medianseqlen']))
+                if omamer_version == '0.2.0':
+                    score = float(omamer_res['family-score'])*min(int(omamer_res['qseqlen']),int(omamer_res['subfamily-medianseqlen']))
+                elif omamer_version == '0.3.0':
+                    score = float(omamer_res['family-score'])
                 if score > best_score:
                     best_score = score
                     main_variant = omamer_res
+                    main_isoform = isoform
         if main_variant != None:
             best_scoring_isoforms.append(main_variant)
-            selected_isoforms.append(isoform)
+            selected_isoforms.append(main_isoform)
         else:
             #If there is no main variant, we have no way to select the best isoform. We select one by default, here the latest appearing in the FASTA file
             not_mapped_gene.append(isoform)
