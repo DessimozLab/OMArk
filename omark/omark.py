@@ -25,7 +25,7 @@ import omark.graphics as graph
 from omark.utils import LOG, set_log_level
 import sys
 
-def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None):
+def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None, taxonomic_rank= None):
 
 
     db = omamer.database.Database(dbpath)
@@ -101,7 +101,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         placements = spd.add_taxid(placements, tax_tab)
         placements, prot_clade = spd.add_uncertain_contaminants(placements, prot_clade)
         #Get the first parent of the chosen clade with at least 5 species
-        closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff)
+        closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff, taxonomic_rank)
 
         LOG.info('Ancestral lineage is '+closest_corr.decode())
 
@@ -156,7 +156,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
 
 
 
-def check_parameters(omamerfile, dbpath, stordir, taxid=None, original_FASTA_file = None,  isoform_file = None):
+def check_parameters(omamerfile, dbpath, stordir, taxid=None, original_FASTA_file = None,  isoform_file = None, taxonomic_rank=None):
 
     omamerfile_valid = io.check_omamerfile(omamerfile)
 
@@ -176,7 +176,12 @@ def check_parameters(omamerfile, dbpath, stordir, taxid=None, original_FASTA_fil
     else:
         isoform_valid = True
 
-    return omamerfile_valid and database_valid and output_directory_valid and taxid_valid and fasta_valid and isoform_valid
+    if taxonomic_rank:
+        taxonomic_rank = spd.check_rank(taxonomic_rank)
+    else:
+        taxonomic_rank = True
+
+    return omamerfile_valid and database_valid and output_directory_valid and taxid_valid and fasta_valid and isoform_valid and taxonomic_rank
 
 def launcher(args):
     omamerfile = args.file
@@ -185,13 +190,14 @@ def launcher(args):
     taxid = args.taxid
     original_fasta = args.og_fasta
     isoform_file = args.isoform_file
+    taxonomic_rank = args.taxonomic_rank
     verbose = args.verbose
     log_level = 'INFO' if verbose else 'WARNING'
     set_log_level(log_level)
     LOG.info('Starting OMArk')
-    if check_parameters(omamerfile, dbpath, outdir,taxid,original_fasta,isoform_file):
+    if check_parameters(omamerfile, dbpath, outdir,taxid,original_fasta,isoform_file,taxonomic_rank):
         LOG.info('Input parameters passed validity check')
-        get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta, isoform_file=isoform_file)
+        get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta, isoform_file=isoform_file, taxonomic_rank=taxonomic_rank)
         LOG.info('Done')
 
     else:

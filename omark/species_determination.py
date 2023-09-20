@@ -29,6 +29,17 @@ def check_taxid(taxid):
             return False
         return True
 
+def check_rank(taxonomic_rank):
+    #Rank options above genus - copied from https://github.com/ropensci/taxize/issues/835
+    rank_options = [ 'domain', 'superkingdom', 'kingdom', 'subkingdom', 'infrakingdom', 'superphylum', 'phylum' ,'division', 'subphylum','subdivision', 'infradivision', 'superclass',
+                    'class', 'subclass', 'infraclass', 'subterclass', 'parvclass', 'megacohort', 'supercohort', 'cohort', 'subcohort', 'infracohort' , 'superorder',
+                    'order', 'suborder', 'infraorder', 'parvorder' , 'superfamily', 'family', 'subfamily', 'supertribe', 'subtribe']
+    if taxonomic_rank not in rank_options:
+        available_options = ','.join(rank_options)
+        LOG.error(f'The provided taxonomic rank is not a valid options. Valid options are {available_options}')
+        return False
+    return True
+
 #Get all lineages from which proteins come in the analyzed proteomes considering the HOGs where the placement was done.
 def get_present_lineages(omamdata, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff, family_score_filter=70, cutoff_percentage=0.000):
     #This cutoff is made to avoid some false positives. Count lineage only if more than 0.001 of its HOGs are represented
@@ -353,14 +364,39 @@ def add_taxid(placements, tax_tab):
 
 
 #Return the closest ancestor of a clade with more than a threshold of species in omamer
-def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff):
+def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff,taxonomic_rank =None):
+    ncbi = ete3.NCBITaxa()
     name_to_lineage = outils.get_full_lineage_omamer([clade], tax_tab)
     lineage = name_to_lineage[clade]
+    is_taxonomic_rank = False
+    selected_tax = None
+    selected_phylum_or_higher = True
+    selected_rank = None
+    name_to_taxid = outils.get_name_to_taxid([x.decode() for x in lineage], tax_tab)
     for tax in lineage:
         species = outils.get_species_from_taxon(tax, tax_tab, sp_tab, tax_buff)
+        taxid = name_to_taxid[tax.decode()]
+        rank = ncbi.get_rank([taxid]).get(taxid,'')
+        if rank == taxonomic_rank:
+            is_taxonomic_rank = True
+        if rank == 'phylum' and selected_tax:
+                #we assume all sub-phylum taxa are a subset of a phylum taxa, any clades selected below phylum will be marked as such
+                selected_phylum_or_higher = False
         if len(species)>=threshold_species:
-              return tax
-    return None
+            if not selected_tax or rank==taxonomic_rank:
+                selected_tax =  tax
+                selected_rank =rank
+    if taxonomic_rank:
+        if is_taxonomic_rank:
+            LOG.info(f'The ancestral lineage is selected at provided taxonomic rank: {taxonomic_rank}.')
+        else:
+            LOG.info(f'The provided taxonomic rank {taxonomic_rank} was not an option (too narrow or absent from our lineage option). Default ancestral lineage will be used.')
+
+    if selected_phylum_or_higher:
+        LOG.warning("The selected ancestral lineage is from the phylum rank or higher which means the target species' taxonomic division is not well sampled in our database. The results may lack accuracy.")
+    if selected_rank in ['genus', 'subgenus', 'section', 'subsection', 'species group', 'species subgroup', 'species']:
+        LOG.warning(f'The selected ancestral lineage is from the {selected_rank} taxonomic rank. Consider trying a broader rank to validate your results.')
+    return selected_tax
 
 
 # USER DETERMINED PLACEMENT
