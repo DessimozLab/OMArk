@@ -41,10 +41,10 @@ def check_database(dbpath):
     except HDF5ExtError:
         LOG.error('The OMAmer database is not a valid HDF5 file.')
         valid = False
-    except AttributeError:
-        LOG.error('The provided HDF5 database is not a correct OMAmer database.')
-        valid = False
-        db.close()
+    #except AttributeError:
+    #    LOG.error('The provided HDF5 database is not a correct OMAmer database.')
+    #    valid = False
+    #    db.close()
     return valid
 
 def get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff):

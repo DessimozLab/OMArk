@@ -23,7 +23,7 @@ from omark.utils import LOG
 #It return a boolean consisting of whether an errror was detected and print the reason for
 #errors
 def check_omamerfile(omamerfile):
-    #Two type of expected headers to be compatible with both version of OMAmer. Both OMAmer2 and 3 are suppored for now.
+    #Two type of expected headers to be compatible with both version of OMAmer. Both OMAmer2 and 3 are supported for now.
     expected_headers_omamer2 = ['qseqid','hogid','overlap', 'family-score','subfamily-score','qseqlen','subfamily-medianseqlen']
     expected_headers_omamer3 = ['qseqid' ,'hogid', 'overlap', 'family-score', 'subfamily-score', 'family-count' ,'family-normcount', 'subfamily-count', 'qseqlen', 'subfamily-medianseqlen']
     try:
@@ -162,9 +162,12 @@ def store_results(storfile, results):
             for elem in hoglist:
                 storage.write(elem+'\n')
 
-def store_list(storfile, data):
+def store_list(storfile, data, comment=None):
 
     with open(storfile, 'w') as storage:
+        if comment:
+            for com in comment:
+                storage.write('#'+com+'\n')
         for elem in data:
             storage.write(elem+'\n')
 

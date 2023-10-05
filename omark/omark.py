@@ -25,7 +25,7 @@ import omark.graphics as graph
 from omark.utils import LOG, set_log_level
 import sys
 
-def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None, taxonomic_rank= None):
+def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None, taxonomic_rank= None, extract_conserved_only=True):
 
 
     db = omamer.database.Database(dbpath)
@@ -156,6 +156,34 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
 
 
 
+def get_only_conserved_HOGs(dbpath, stordir, taxid, taxonomic_rank=None):
+    db = omamer.database.Database(dbpath)
+
+    #Variables
+    hog_tab = db._hog_tab[:]
+    prot_tab = db._prot_tab
+    sp_tab = db._sp_tab
+    tax_tab = db._tax_tab[:]
+    fam_tab = db._fam_tab[:]
+    cprot_buff = db._cprot_arr
+    tax_buff = db._ctax_arr[:]
+    chog_buff = db._chog_arr
+    hogtax_buff = db._hog_taxa_buff
+    lin = spd.get_lineage_ncbi(taxid)
+    likely_clade = spd.find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
+    LOG.info('A taxid was provided. The query taxon is '+likely_clade.decode())
+
+    closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff, taxonomic_rank)
+    LOG.info('Ancestral lineage is '+closest_corr.decode())
+    LOG.info('Estimating ancestral HOG content')
+    conshog, cladehog = sc.get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
+    LOG.info(str(len(conshog))+" HOGs are conserved in the query's lineage.")
+
+    db.close()
+
+    hog_list = [x[1].decode() for x in conshog]
+    io.store_list(stordir+'/conserved_HOGs.txt', hog_list, comment=[f'Ancestral lineage: {closest_corr.decode()}'])
+
 def check_parameters(omamerfile, dbpath, stordir, taxid=None, original_FASTA_file = None,  isoform_file = None, taxonomic_rank=None):
 
     omamerfile_valid = io.check_omamerfile(omamerfile)
@@ -192,10 +220,22 @@ def launcher(args):
     isoform_file = args.isoform_file
     taxonomic_rank = args.taxonomic_rank
     verbose = args.verbose
+    only_conserved_HOGs = args.output_cHOGs
     log_level = 'INFO' if verbose else 'WARNING'
     set_log_level(log_level)
     LOG.info('Starting OMArk')
-    if check_parameters(omamerfile, dbpath, outdir,taxid,original_fasta,isoform_file,taxonomic_rank):
+    if only_conserved_HOGs:
+        LOG.info('The option to output only conserved_HOGs was selected')
+        if not taxid :
+            LOG.error('A taxid must be provided for this use-case')
+            sys.exit(1)
+        if spd.check_taxid(taxid) and io.check_and_create_output_folder(outdir):
+            get_only_conserved_HOGs(dbpath, outdir, taxid,taxonomic_rank=taxonomic_rank )
+            LOG.info('Done')
+        else:
+            LOG.error('Exiting because one or more parameters are incorrect')
+            sys.exit(1)
+    elif check_parameters(omamerfile, dbpath, outdir,taxid,original_fasta,isoform_file,taxonomic_rank):
         LOG.info('Input parameters passed validity check')
         get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta, isoform_file=isoform_file, taxonomic_rank=taxonomic_rank)
         LOG.info('Done')

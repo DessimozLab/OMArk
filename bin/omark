@@ -26,15 +26,20 @@ def build_arg_parser():
     -----------
     A parser object with the chosen option and parameters"""
 
-    parser = argparse.ArgumentParser(description="Compute an OMA quality score from the OMAmer file of a proteome.")   
-    parser.add_argument('-f', '--file', type=str, help="Input OMAmer file - obtained as output from an OMAmer search.", required=True)	
+    parser = argparse.ArgumentParser(description="Compute an OMA quality score from the OMAmer file of a proteome.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-f', '--file', type=str, help="Input OMAmer file - obtained as output from an OMAmer search.")    
+    group.add_argument('-c', '--output_cHOGs', help='Switch OMArk mode to only computing a list of conserved HOGs and output it as list. Can be used to obtain a set of genes on which to train', action='store_true')
+    
     parser.add_argument('-d', '--database', type=str, help="The OMAmer database.", required=True)
-    parser.add_argument('-o', '--outputFolder', type=str, help="The folder containing output data the script wilp generate.", default="./omark_output/")
     parser.add_argument('-t', '--taxid', type=int, help='Taxonomic identifier', default=None)
+    parser.add_argument('-o', '--outputFolder', type=str, help="The folder containing output data the script wilp generate.", default="./omark_output/")
+    parser.add_argument('-r', '--taxonomic_rank', type=str, help='The narrowest taxonomic rank (genus, order, family...) that should be used as ancestral lineage.', default=None)
+
     parser.add_argument('-of', '--og_fasta', type=str, help='Original FASTA file', default=None)
     parser.add_argument('-i', '--isoform_file', type=str, help='A semi-colon separated file, listing all isoforoms of each genes, with one gene per line.', default=None)
-    parser.add_argument('-r', '--taxonomic_rank', type=str, help='The narrowest taxonomic rank (genus, order, family...) that should be used as ancestral lineage.', default=None)
     parser.add_argument('-v', '--verbose', help='Turn on logging information about OMArk process', action='store_true')
+
 
     return parser
 
