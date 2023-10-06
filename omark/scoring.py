@@ -17,15 +17,13 @@ import omark.omamer_utils as outils
 from omamer.hierarchy import get_descendants
 
 
-
 #Mutliple level of a same HOG can be counted as is   
 def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cprot_buff, chog_buff, tax_buff, hogtax_buff,  duplicate, threshold=0.9 ) :
     found_hog = list()
     poss_hog = list()
-    seen_hog = list()
     other_cl_hog = list()
-    clade_to_lineage = outils.get_full_lineage_omamer([clade.encode('ascii')], tax_tab, tax_buff, True)
-    lineage = clade_to_lineage[clade.encode('ascii')]
+    clade_to_lineage = outils.get_full_lineage_omamer([clade], tax_tab, tax_buff, True)
+    lineage = clade_to_lineage[clade]
     sp_target = outils.get_species_from_taxon(clade, tax_tab, sp_tab, tax_buff)
 
     for f in fam_tab:
@@ -34,21 +32,20 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
         hog_num = f['HOGnum']
         hogs = hog_tab[hog_off : hog_off+hog_num]
         for x in hogs:
-        #for x in range(hog_off, hog_off+hog_num):
+        #for x in range (hog_off, hog_off+hog_num):
                 #tax_ind = hogtax_tab[x: x+2]
                 tax_ind = x['HOGtaxaOff']
                 tax_num = x['HOGtaxaNum']
                 tax_off = hogtax_buff[tax_ind: tax_ind+tax_num]
-                tax_name = tax_tab[tax_off]['ID']
-                if clade.encode('ascii') in tax_name :
+                tax_name = [y.decode() for y in tax_tab[tax_off]['ID']]
+                if clade in tax_name :
                        poss_hog.append(x)
-                       seen_hog.append(x['ID'])
     
     for t in poss_hog:
         # Maybe useful if we allow paralogs
         #all_desc = get_descendant_HOGs(t, tabi, chog_buff)
         sp_hog=list()        
-        clade_name = tax_tab[t['TaxOff']]['ID']
+        clade_name = tax_tab[t['TaxOff']]['ID'].decode()
         if clade_name not in lineage :
                 continue
         prot_num = t["ChildrenProtNum"]
@@ -57,7 +54,7 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
         if duplicate:
                 all_desc = outils.get_descendant_HOGs(t, hog_tab, chog_buff)
                 for desc in all_desc:
-                        desc_tax_name = tax_tab[desc['TaxOff']]["ID"]
+                        desc_tax_name = tax_tab[desc['TaxOff']]["ID"].decode()
                         if desc_tax_name not in lineage :
                                continue
                         sp_hog += [x[0].decode() for x in outils.get_species_from_omamer(desc,prot_tab, sp_tab, cprot_buff)]
@@ -75,18 +72,18 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
 def get_root_HOGs_descendants(lineage, tax_tab, hog_tab, fam_tab, tax_buff):
 
     tax_off2tax = tax_tab['ID']
-    tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
-    descendants = tax_tab[get_descendants(tax2tax_off[lineage], tax_tab, tax_buff)]['ID']
+    tax2tax_off = dict(zip([x.decode() for x in tax_off2tax], range(tax_off2tax.size)))
+    descendants = [x.decode() for x in tax_tab[get_descendants(tax2tax_off[lineage], tax_tab, tax_buff)]['ID']]
     desc_root_HOGs = list()
     for f in fam_tab:
         off = f['TaxOff']
-        sp = tax_tab[off]["ID"]
+        sp = tax_tab[off]["ID"].decode()
         if sp in descendants:
             hog = hog_tab[f['HOGoff']]
             desc_root_HOGs.append(hog)
     return desc_root_HOGs
     
-def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
+def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff, hog_id_buff):
     all_subf = list()
     all_prot = list()    
     found = list()
@@ -99,7 +96,7 @@ def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
     #Checking all HOGs from the conserved HOG list
     for hog in conserved_hogs :
         done = False
-        identifier = hog['OmaID'].decode()
+        identifier = outils.get_hog_id(hog, hog_id_buff)
         if identifier in all_subf:
             nb_found = all_subf.count(identifier)
             st_ind = 0
@@ -115,7 +112,7 @@ def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
             done = True
 
         count_os = 0
-        for subhog in [x['OmaID'].decode() for x in outils.get_descendant_HOGs(hog, hog_tab, chog_buff)]:
+        for subhog in [outils.get_hog_id(x, hog_id_buff) for x in outils.get_descendant_HOGs(hog, hog_tab, chog_buff)]:
         
             if subhog in all_subf:
                 if subhog not in seen_hog_id:
@@ -135,7 +132,7 @@ def found_with_omamer(omamer_data, conserved_hogs, hog_tab, chog_buff):
             done = True
             
             
-        for superhog in [x['OmaID'].decode() for x in outils.get_ancestral_HOGs(hog, hog_tab, chog_buff)]:
+        for superhog in [outils.get_hog_id(x, hog_id_buff) for x in outils.get_ancestral_HOGs(hog, hog_tab, chog_buff)]:
             if superhog in all_subf:
                 if superhog not in seen_hog_id:
                     seen_hog_id.append(superhog)

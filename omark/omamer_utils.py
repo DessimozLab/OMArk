@@ -24,27 +24,39 @@ def check_database(dbpath):
     valid = True
     try:
         db = omamer.database.Database(dbpath)
-        hog_tab = db._hog_tab
-        prot_tab = db._prot_tab
-        sp_tab = db._sp_tab
-        tax_tab = db._tax_tab
-        fam_tab = db._fam_tab
-        cprot_buff = db._cprot_arr
-        tax_buff = db._ctax_arr
-        chog_buff = db._chog_arr
-        hogtax_buff = db._hog_taxa_buff
-        db.close()
+        if hasattr(db, '_hog_tab'):
 
+            hog_tab = db._hog_tab
+            prot_tab = db._prot_tab
+            sp_tab = db._sp_tab
+            tax_tab = db._tax_tab
+            fam_tab = db._fam_tab
+            cprot_buff = db._cprot_arr
+            tax_buff = db._ctax_arr
+            chog_buff = db._chog_arr
+            hogtax_buff = db._hog_taxa_buff
+        else:
+            hog_tab = db._db_HOG[:]  # db._hog_tab[:]
+            prot_tab = db._db_Protein  # db._prot_tab
+            sp_tab = db._db_Species  # db._sp_tab
+            tax_tab = db._db_Taxonomy[:]  # db._tax_tab[:]
+            fam_tab = db._db_Family[:]  # db._fam_tab[:]
+            cprot_buff = db._db_ChildrenProt  # db._cprot_arr
+            tax_buff = db._db_ChildrenTax[:]  # db._ctax_arr[:]
+            chog_buff = db._db_ChildrenHOG  # db._chog_arr
+            hogtax_buff = db._db_HOGtaxa  # db._hog_taxa_buff
+            hog_id_buff = db._db_HOGIDBuffer[:]
+        db.close()
     except OSError:
         LOG.error('Path to the OMAmer database is not valid.')
         valid = False
     except HDF5ExtError:
         LOG.error('The OMAmer database is not a valid HDF5 file.')
         valid = False
-    #except AttributeError:
-    #    LOG.error('The provided HDF5 database is not a correct OMAmer database.')
-    #    valid = False
-    #    db.close()
+    except AttributeError:
+        LOG.error('The provided HDF5 database is not a correct OMAmer database.')
+        valid = False
+        db.close()
     return valid
 
 def get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff):
@@ -54,10 +66,8 @@ def get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff):
     #Get the tax-off of the target HOG
     tax_off = hog_tab[hog_off]['TaxOff']
     #Get all taxa that descend from the taxon of target HOG
-    hog_taxa = set()    
-    #hog_taxa = set(get_descendant_taxa(tax_off, tax_tab, ctax_buff))
     
-    hog_taxa.add(tax_off)
+    hog_taxa = tax_off
 
     return hog_taxa
 
@@ -68,7 +78,7 @@ def get_spec_by_tax(tax_tab, sp_tab, tax_buff):
     i=0
     spec_by_tax = dict()
     for tax_entry in tax_tab:
-        taxname = tax_entry['ID']
+        taxname = tax_entry['ID'].decode()
         sp_off_in_tax = get_leaves(i, tax_tab, tax_buff)
         sp_tax =[ tax_tab[x][0].decode() for x in sp_off_in_tax]
         spec_by_tax[taxname] = set(sp_tax)
@@ -80,7 +90,7 @@ def get_nb_hogs_by_clade(hog_tab, tax_tab):
     hog_by_tax = dict()
     for hog_off in range(hog_tab.size):
         taxoff = hog_tab[hog_off]['TaxOff']
-        tax = tax_tab[taxoff]["ID"]
+        tax = tax_tab[taxoff]["ID"].decode()
         if tax not in hog_by_tax:
             hog_by_tax[tax]=0
         hog_by_tax[tax]+=1
@@ -92,7 +102,7 @@ def get_prop_duplicated(hog_tab, tax_tab, chog_buff):
     for hog_off in range(hog_tab.size):
         t = hog_tab[hog_off]
         taxoff = hog_tab[hog_off]['TaxOff']
-        tax = tax_tab[taxoff]["ID"]
+        tax = tax_tab[taxoff]["ID"].decode()
         if tax not in hog_by_tax:
             hog_by_tax[tax]=0
         descendants = get_descendant_HOGs(t, hog_tab, chog_buff)
@@ -103,7 +113,7 @@ def get_prop_duplicated(hog_tab, tax_tab, chog_buff):
             for desc in descendants:
                 
                 taxd_off = desc['TaxOff']
-                tax_d = tax_tab[taxd_off]['ID']
+                tax_d = tax_tab[taxd_off]['ID'].decode()
                 if tax_d not in transition[tax]:
                     transition[tax][tax_d] = 0
                 if not tax_d in seen_sp:
@@ -122,10 +132,10 @@ def get_prop_duplicated(hog_tab, tax_tab, chog_buff):
 
 
 def get_species_from_taxon(taxname, tax_tab, sp_tab, tax_buff):
-    tax_off2tax = tax_tab['ID'] 
-    tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
+    tax_off2tax = tax_tab['ID']
+    tax2tax_off = dict(zip([x.decode() for x in tax_off2tax], range(tax_off2tax.size)))
     if type(taxname)==str:
-        taxname = taxname.encode('ascii')
+        taxname = taxname
     tax_off = tax2tax_off[taxname]
     sp_off_in_tax = get_leaves(tax_off, tax_tab, tax_buff)
     sp_tax =[ tax_tab[x][0].decode() for x in sp_off_in_tax]
@@ -135,13 +145,13 @@ def get_species_from_taxon(taxname, tax_tab, sp_tab, tax_buff):
 def get_full_lineage_omamer(taxnames, tax_tab, tax_buff = False,  descendant = False):
     name_to_lineage = dict()
     tax_off2tax = tax_tab['ID']
-    tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
+    tax2tax_off = dict(zip([x.decode() for x in tax_off2tax], range(tax_off2tax.size)))
     for taxname in taxnames:
         lineage = list()
         reached = False
         current_tax = tax_tab[tax2tax_off[taxname]]
         while not reached: 
-            lineage.append(current_tax['ID'])
+            lineage.append(current_tax['ID'].decode())
             ancestor_tax = current_tax['ParentOff']
             if ancestor_tax!=-1:
                     current_tax  = tax_tab[ancestor_tax]
@@ -149,7 +159,7 @@ def get_full_lineage_omamer(taxnames, tax_tab, tax_buff = False,  descendant = F
                     reached = True
         if descendant :
 
-            lineage += tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'].tolist()
+            lineage += [x.decode() for x in tax_tab[get_descendants(tax2tax_off[taxname], tax_tab, tax_buff)]['ID'].tolist()]
         name_to_lineage[taxname] = lineage
         
     return name_to_lineage
@@ -166,9 +176,9 @@ def get_root_clade(tax_tab):
 def get_name_to_taxid(taxnames, tax_tab):
     name_to_taxid = dict()
     tax_off2tax = tax_tab['ID']
-    tax2tax_off = dict(zip(tax_off2tax, range(tax_off2tax.size)))
+    tax2tax_off = dict(zip([x.decode() for x in tax_off2tax], range(tax_off2tax.size)))
     for name in taxnames:
-        tax = tax_tab[tax2tax_off[name.encode()]]
+        tax = tax_tab[tax2tax_off[name]]
         taxid = tax['TaxID']
         name_to_taxid[name] = taxid
     return name_to_taxid
@@ -246,3 +256,13 @@ def get_species_from_omamer(hog, prot_tab, spe_tab, cprot_buff) :
         sp_list.append(spe_tab[spe_off])
 
     return sp_list
+
+def get_hog_id(hog, hog_id_buff):
+    # extract the hog id from the hog id buffer
+    if "IDBufferOff" in hog.dtype.fields:
+        s = hog["IDBufferOff"]
+        e = s + hog["IDLen"]
+        return hog_id_buff[s:e].tobytes().decode("ascii")
+    else:
+        # hog_id_buff is set to None
+        return hog["OmaID"]

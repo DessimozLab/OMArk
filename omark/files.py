@@ -24,13 +24,16 @@ from omark.utils import LOG
 #errors
 def check_omamerfile(omamerfile):
     #Two type of expected headers to be compatible with both version of OMAmer. Both OMAmer2 and 3 are supported for now.
-    expected_headers_omamer2 = ['qseqid','hogid','overlap', 'family-score','subfamily-score','qseqlen','subfamily-medianseqlen']
-    expected_headers_omamer3 = ['qseqid' ,'hogid', 'overlap', 'family-score', 'subfamily-score', 'family-count' ,'family-normcount', 'subfamily-count', 'qseqlen', 'subfamily-medianseqlen']
+    expected_headers_omamer2 = set(['qseqid','hogid','overlap', 'family-score','subfamily-score','qseqlen','subfamily-medianseqlen'])
+    expected_headers_omamer3 = set(['qseqid' ,'hogid', 'family_p', 'hoglevel', 'qseqlen', 'subfamily_medianseqlen', 'qseq_overlap'])
+
     try:
         with open(omamerfile,'r') as f:
             firstline = f.readline()
-            cat = firstline.strip('\n').split('\t')
-            if cat!=expected_headers_omamer2 and cat!=expected_headers_omamer3:
+            while firstline[0]=='!':
+                firstline = f.readline()
+            cat = set(firstline.strip('\n').split('\t'))
+            if len(expected_headers_omamer2-cat)!=0 and len(expected_headers_omamer3-cat)!=0:
                 LOG.error('The input OMAmer file is not well formated. Check that your OMAmer version is >=2.2.')
                 return False
     except FileNotFoundError:
@@ -82,15 +85,27 @@ def parseOmamer(file):
     not_mapped = list()
 
     with open(file) as f:
-        
         firstline = f.readline()
+        while firstline[0]=='!':
+            firstline = f.readline()
         cat = firstline.strip('\n').split('\t')
+        newcat = []
+
+        #Replace header for back compatibility between versions of omamer
+        for x in cat:
+            x = x.replace('_', '-')
+            if x == 'qseq-overlap':
+                x = 'overlap'
+            if x == 'family-p':
+                x = 'family-score'
+            newcat.append(x)
+        cat = newcat
         for line in f.readlines():
             data = dict()   
             col = line.strip('\n').split('\t')
             for i in range(len(cat)) :
                 data[cat[i]] = col[i]
-            if data['hogid']=='na':
+            if data['hogid'] in ['na', 'N/A']:
                 not_mapped.append(col[0])
                 continue
             alldata.append(data)
@@ -106,7 +121,7 @@ def parse_isoform_file(file):
     return isoform_by_gene
 
 
-def select_isoform(isoform_data, alldata, omamer_version = "0.3.0"):
+def select_isoform(isoform_data, alldata, omamer_version = "2.0.0"):
     indexed_data = {x['qseqid'] : x for x in alldata}
     best_scoring_isoforms = list()
     selected_isoforms = list()
@@ -120,7 +135,7 @@ def select_isoform(isoform_data, alldata, omamer_version = "0.3.0"):
             if omamer_res:
                 if omamer_version == '0.2.0':
                     score = float(omamer_res['family-score'])*min(int(omamer_res['qseqlen']),int(omamer_res['subfamily-medianseqlen']))
-                elif omamer_version == '0.3.0':
+                elif omamer_version == '2.0.0':
                     score = float(omamer_res['family-score'])
                 if score > best_score:
                     best_score = score
@@ -191,7 +206,7 @@ def write_templated_report(template_file, storfile, results, results_proteomes, 
 #This function create a detailed dictionnary of all OMArk stats, by post-processing the results of the different analysis.
 def organize_results(results, results_proteomes, selected_lineage, species_report):
 
-    ancestral_lineage = selected_lineage.decode()
+    ancestral_lineage = selected_lineage
 
 
     single_nr = len(results['Single'])+len(results['Overspecific_S'])+len(results['Underspecific'])

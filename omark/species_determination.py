@@ -76,27 +76,30 @@ def get_close_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, al
     descendant = None
     seen_hogs = list()
 
-    hog_off2subf = hog_tab['OmaID'] 
-    subf2hog_off = dict(zip(hog_off2subf, range(hog_off2subf.size)))
-    tax_off2tax = tax_tab['ID'] 
+    if 'hoglevel' not in omamerdata[0]:
+        hog_off2subf = hog_tab['OmaID']
+        subf2hog_off = dict(zip(hog_off2subf, range(hog_off2subf.size)))
+        tax_off2tax = tax_tab['ID']
     
     for omamapping in omamerdata:
         j+=1
         if omamapping['hogid'] == 'na':
-            continue    
-        hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
-        taxa = outils.get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
+            continue
         if not allow_hog_redun:
             if omamapping['hogid'] in seen_hogs:
                 continue
             else:
                 seen_hogs.append(omamapping['hogid'])
-        for taxon in taxa:
-            taxname = tax_off2tax[taxon]
-            if taxname in alltaxa :
-                alltaxa[taxname]+=1
-            else: 
-                alltaxa[taxname]=1
+        if 'hoglevel' not in omamapping:
+            hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
+            taxon = outils.get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
+            taxname = tax_off2tax[taxon].decode()
+        else:
+            taxname = omamapping['hoglevel']
+        if taxname in alltaxa :
+            alltaxa[taxname]+=1
+        else:
+            alltaxa[taxname]=1
     #print(len(alltaxa))
     #print(alltaxa)
     
@@ -111,16 +114,16 @@ def tree_from_taxlist(all_taxa, tax_tab):
     all_names = all_taxa.keys()
     if len(all_names)>0:
         name_to_lineage = outils.get_full_lineage_omamer(all_names, tax_tab)
-        oldest_ancestor = name_to_lineage[list(all_names)[0]][-1].decode()
+        oldest_ancestor = name_to_lineage[list(all_names)[0]][-1]
     else:
-        oldest_ancestor = outils.get_root_clade(tax_tab).decode()
+        oldest_ancestor = outils.get_root_clade(tax_tab)
     t = ete3.Tree(name=oldest_ancestor)
     existing_node = [oldest_ancestor]
     curr_node = t
     for name, count in all_taxa.items():
         lineage = name_to_lineage[name]
         for clade in reversed(lineage):
-            clade = clade.decode()
+            clade = clade
             if clade not in existing_node:
                 curr_node = curr_node.add_child(name=clade)
                 existing_node.append(clade)
@@ -133,9 +136,9 @@ def tree_from_taxlist(all_taxa, tax_tab):
 #Rather than checking depth: check significant linearity to main branch + depth higher node. Maybe try with a new version
 #Return a list of tuple: (best ranking clade [allow for selection of lesser clade], maximum score, depth of the selected clade, continuity, depth of best_clade]?
 def get_likely_spec(t, score, numb, tax_to_spec, prop_inherited):
-    cur_score = score.get(t.name.encode(),0)
-    cur_numb = numb.get(t.name.encode(),0)
-    cur_sp = tax_to_spec[t.name.encode()]
+    cur_score = score.get(t.name,0)
+    cur_numb = numb.get(t.name,0)
+    cur_sp = tax_to_spec[t.name]
     if t.is_leaf():
         return [(t.name, cur_score, cur_numb,0)]
     all_child = list()
@@ -153,8 +156,8 @@ def get_likely_spec(t, score, numb, tax_to_spec, prop_inherited):
 
             best_ranking = child
             max_score = child[1]
-        child_sp = tax_to_spec[child[0] .encode()]
-        if child[2]>cur_numb*(prop_inherited.get(t.name.encode(), dict()).get(child[0].encode(),0))  and child[1]>cur_score*(len(child_sp)/len(cur_sp))  :
+        child_sp = tax_to_spec[child[0]]
+        if child[2]>cur_numb*(prop_inherited.get(t.name, dict()).get(child[0],0))  and child[1]>cur_score*(len(child_sp)/len(cur_sp))  :
             qualified.append(child)
             if child[3]<=1:
                 low_depth += 1
@@ -241,12 +244,12 @@ def compute_protein_breakdown(all_plac,t, prot_by_taxa, include_uncertain=True):
                 break
             all_prots = prots_by_clade.get(target_clade, [])
             if cur_node.name not in seen_nodes:
-                all_prots.append((level, cur_node.name, prot_by_taxa.get(cur_node.name.encode(),[])))
+                all_prots.append((level, cur_node.name, prot_by_taxa.get(cur_node.name,[])))
                 seen_nodes.append(cur_node.name)
             all_children = cur_node.get_descendants()
             for node_child in all_children :
                 if node_child.name not in seen_nodes:
-                    all_prots.append((level, node_child.name, prot_by_taxa.get(node_child.name.encode(),[])))
+                    all_prots.append((level, node_child.name, prot_by_taxa.get(node_child.name,[])))
                     seen_nodes.append(node_child.name)
 
             level += 1
@@ -263,31 +266,32 @@ def get_HOGs_taxa_omamer(omamerdata, hog_tab, tax_tab, ctax_buff, chog_buff, all
     j=0
     descendant = None
     seen_hogs = list()
- 
-    hog_off2subf = hog_tab['OmaID'] 
-    subf2hog_off = dict(zip(hog_off2subf, range(hog_off2subf.size)))
-    tax_off2tax = tax_tab['ID']
+    if not 'hoglevel' in omamerdata[0]:
+        hog_off2subf = hog_tab['OmaID']
+        subf2hog_off = dict(zip(hog_off2subf, range(hog_off2subf.size)))
+        tax_off2tax = tax_tab['ID']
     for omamapping in omamerdata:
         j+=1
         if omamapping['hogid'] == 'na':
             continue    
-        hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]       
-        taxa = outils.get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
         if not allow_hog_redun:
-            if omamapping['hogid'] in seen_hogs:
-                continue
-            else:
-                seen_hogs.append(omamapping['hogid'])
-  
-        for taxon in taxa:
-            taxname = tax_off2tax[taxon]
-            if taxname in alltaxa :
-                alltaxa[taxname]+=1
-                tax_HOGs[taxname].append((omamapping['hogid'],omamapping['qseqid']))
-            else: 
-                alltaxa[taxname]=1
-                tax_HOGs[taxname] = list()
-                tax_HOGs[taxname].append((omamapping['hogid'],omamapping['qseqid']))
+                if omamapping['hogid'] in seen_hogs:
+                    continue
+                else:
+                    seen_hogs.append(omamapping['hogid'])
+        if not 'hoglevel' in omamapping:
+            hog_off = subf2hog_off[omamapping['hogid'].encode('ascii')]
+            taxon = outils.get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff)
+            taxname = tax_off2tax[taxon].decode()
+        else:
+            taxname = omamapping['hoglevel']
+        if taxname in alltaxa :
+            alltaxa[taxname]+=1
+            tax_HOGs[taxname].append((omamapping['hogid'],omamapping['qseqid']))
+        else:
+            alltaxa[taxname]=1
+            tax_HOGs[taxname] = list()
+            tax_HOGs[taxname].append((omamapping['hogid'],omamapping['qseqid']))
 
     alltaxa = {k: v for k, v in sorted(alltaxa.items(), key=lambda item: item[1], reverse=True)}
 
@@ -372,10 +376,10 @@ def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff,taxonom
     selected_tax = None
     selected_phylum_or_higher = True
     selected_rank = None
-    name_to_taxid = outils.get_name_to_taxid([x.decode() for x in lineage], tax_tab)
+    name_to_taxid = outils.get_name_to_taxid([x for x in lineage], tax_tab)
     for tax in lineage:
         species = outils.get_species_from_taxon(tax, tax_tab, sp_tab, tax_buff)
-        taxid = name_to_taxid[tax.decode()]
+        taxid = name_to_taxid[tax]
         rank = ncbi.get_rank([taxid]).get(taxid,'')
         if rank == taxonomic_rank:
             is_taxonomic_rank = True

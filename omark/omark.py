@@ -28,18 +28,7 @@ import sys
 def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None, taxonomic_rank= None, extract_conserved_only=True):
 
 
-    db = omamer.database.Database(dbpath)
 
-    #Variables
-    hog_tab = db._hog_tab[:]
-    prot_tab = db._prot_tab
-    sp_tab = db._sp_tab
-    tax_tab = db._tax_tab[:]
-    fam_tab = db._fam_tab[:]
-    cprot_buff = db._cprot_arr
-    tax_buff = db._ctax_arr[:]
-    chog_buff = db._chog_arr
-    hogtax_buff = db._hog_taxa_buff
 	   
     allres = dict()
     
@@ -51,11 +40,34 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         omamdata, not_mapped  = io.parseOmamer(omamerfile)
 
         #Check omamer version:
-        if "family-count" in omamdata[0]:
-            omamer_version = "0.3.0"
+        if "hoglevel" in omamdata[0]:
+            omamer_version = "2.0.0"
         else:
             omamer_version = "0.2.0"
-
+        db = omamer.database.Database(dbpath)
+        if omamer_version == '2.0.0':
+            hog_tab = db._db_HOG[:]  # db._hog_tab[:]
+            prot_tab = db._db_Protein  # db._prot_tab
+            sp_tab = db._db_Species  # db._sp_tab
+            tax_tab = db._db_Taxonomy[:]  # db._tax_tab[:]
+            fam_tab = db._db_Family[:]  # db._fam_tab[:]
+            cprot_buff = db._db_ChildrenProt  # db._cprot_arr
+            tax_buff = db._db_ChildrenTax[:]  # db._ctax_arr[:]
+            chog_buff = db._db_ChildrenHOG  # db._chog_arr
+            hogtax_buff = db._db_HOGtaxa  # db._hog_taxa_buff
+            hog_id_buff = db._db_HOGIDBuffer[:]
+        else:
+            #Variables
+            hog_tab = db._hog_tab[:]
+            prot_tab = db._prot_tab
+            sp_tab = db._sp_tab
+            tax_tab = db._tax_tab[:]
+            fam_tab = db._fam_tab[:]
+            cprot_buff = db._cprot_arr
+            tax_buff = db._ctax_arr[:]
+            chog_buff = db._chog_arr
+            hogtax_buff = db._hog_taxa_buff
+            hog_id_buff = None
 
         if isoform_file:
             LOG.info('An isoform_file was provided.')
@@ -69,7 +81,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         LOG.info('Determinating species composition from HOG placements')
 
         #Determine species and contamination
-        if omamer_version == "0.3.0":
+        if omamer_version == "2.0.0":
             placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff)
         else:
             placements = spd.get_present_lineages(full_match_data, hog_tab, tax_tab, tax_buff, sp_tab, chog_buff, family_score_filter=None, cutoff_percentage=0.001)
@@ -84,8 +96,8 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         #Procedure when the user do not give taxonomu information. Will use the main species from the placement
         if taxid==None:
 
-            likely_clade =  placements[0][0].encode()
-            LOG.info('No taxid was provided. From HOG placements, the query taxon is '+likely_clade.decode())
+            likely_clade =  placements[0][0]
+            LOG.info('No taxid was provided. From HOG placements, the query taxon is '+likely_clade)
 
         #Otherwise find the closest clade in the OMAmer database from the given taxid
         else :
@@ -93,7 +105,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
             likely_clade = spd.find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
             #Used in case the placement main species conflict with the given taxid, will chose the given clade as reference
             placements = spd.reorganize_placements_from_taxid(placements, likely_clade,tax_tab, tax_buff)
-            LOG.info('A taxid was provided. The query taxon is '+likely_clade.decode())
+            LOG.info('A taxid was provided. The query taxon is '+likely_clade)
 
         #Get the proteins belonging to contaminants
         contaminant_prots = spd.get_contaminant_proteins(placements, prot_clade)
@@ -103,13 +115,13 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         #Get the first parent of the chosen clade with at least 5 species
         closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff, taxonomic_rank)
 
-        LOG.info('Ancestral lineage is '+closest_corr.decode())
+        LOG.info('Ancestral lineage is '+closest_corr)
 
         #Conshog : HOG with 80% representative of the target lineage
         #Cladehog : HOG with at least 1 representative of the target lineage present in the common ancestir
         LOG.info('Estimating ancestral and conserved HOG content')
 
-        conshog, cladehog = sc.get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
+        conshog, cladehog = sc.get_conserved_hogs(closest_corr, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
         lineage_rhog = sc.get_root_HOGs_descendants(closest_corr, tax_tab, hog_tab, fam_tab,tax_buff)
 
         cladehog = cladehog + lineage_rhog
@@ -118,18 +130,18 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         LOG.info(str(len(conshog))+' conserved ancestral HOGs will be used from completeness assesment')
 
         LOG.info('Comparing the query gene repertoire to lineage-associated HOGs')
-        wholeres, found_clade, nic = sc.found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff)
+        wholeres, found_clade, nic = sc.found_with_omamer(omamdata ,cladehog, hog_tab, chog_buff, hog_id_buff)
         res_proteomes = sc.score_whole_proteome(found_clade, nic, partials, fragments, not_mapped, contaminant_prots)
 
         LOG.info('Comparing the query gene repertoire to conserved ancestral HOGs')
-        res_completeness, found_cons, nicons = sc.found_with_omamer(omamdata ,conshog, hog_tab, chog_buff)
+        res_completeness, found_cons, nicons = sc.found_with_omamer(omamdata ,conshog, hog_tab, chog_buff, hog_id_buff)
 
         db.close()
         LOG.info('Writing OMArk output files')
 
         #Store the taxonomic choices
-        io.store_close_level(stordir+'/'+basefile+".tax", {'Sampled': str(closest_corr.decode()),
-                                                                            'Closest' : str(likely_clade.decode())})
+        io.store_close_level(stordir+'/'+basefile+".tax", {'Sampled': str(closest_corr),
+                                                                            'Closest' : str(likely_clade) })
 
         #Write optionnal taxa files
         if original_FASTA_file:
@@ -160,15 +172,28 @@ def get_only_conserved_HOGs(dbpath, stordir, taxid, taxonomic_rank=None):
     db = omamer.database.Database(dbpath)
 
     #Variables
-    hog_tab = db._hog_tab[:]
-    prot_tab = db._prot_tab
-    sp_tab = db._sp_tab
-    tax_tab = db._tax_tab[:]
-    fam_tab = db._fam_tab[:]
-    cprot_buff = db._cprot_arr
-    tax_buff = db._ctax_arr[:]
-    chog_buff = db._chog_arr
-    hogtax_buff = db._hog_taxa_buff
+    if hasattr(db, '_hog_tab'):
+        hog_tab = db._hog_tab[:]
+        prot_tab = db._prot_tab
+        sp_tab = db._sp_tab
+        tax_tab = db._tax_tab[:]
+        fam_tab = db._fam_tab[:]
+        cprot_buff = db._cprot_arr
+        tax_buff = db._ctax_arr[:]
+        chog_buff = db._chog_arr
+        hogtax_buff = db._hog_taxa_buff
+        hog_id_buff = None
+    else:
+        hog_tab = db._db_HOG[:]  # db._hog_tab[:]
+        prot_tab = db._db_Protein  # db._prot_tab
+        sp_tab = db._db_Species  # db._sp_tab
+        tax_tab = db._db_Taxonomy[:]  # db._tax_tab[:]
+        fam_tab = db._db_Family[:]  # db._fam_tab[:]
+        cprot_buff = db._db_ChildrenProt  # db._cprot_arr
+        tax_buff = db._db_ChildrenTax[:]  # db._ctax_arr[:]
+        chog_buff = db._db_ChildrenHOG  # db._chog_arr
+        hogtax_buff = db._db_HOGtaxa  # db._hog_taxa_buff
+        hog_id_buff = db._db_HOGIDBuffer[:]
     lin = spd.get_lineage_ncbi(taxid)
     likely_clade = spd.find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
     LOG.info('A taxid was provided. The query taxon is '+likely_clade.decode())
