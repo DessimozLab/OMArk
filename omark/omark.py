@@ -196,18 +196,18 @@ def get_only_conserved_HOGs(dbpath, stordir, taxid, taxonomic_rank=None):
         hog_id_buff = db._db_HOGIDBuffer[:]
     lin = spd.get_lineage_ncbi(taxid)
     likely_clade = spd.find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
-    LOG.info('A taxid was provided. The query taxon is '+likely_clade.decode())
+    LOG.info('A taxid was provided. The query taxon is '+likely_clade)
 
     closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff, taxonomic_rank)
-    LOG.info('Ancestral lineage is '+closest_corr.decode())
+    LOG.info('Ancestral lineage is '+closest_corr)
     LOG.info('Estimating ancestral HOG content')
-    conshog, cladehog = sc.get_conserved_hogs(closest_corr.decode(), hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
+    conshog, cladehog = sc.get_conserved_hogs(closest_corr, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
     LOG.info(str(len(conshog))+" HOGs are conserved in the query's lineage.")
 
-    db.close()
 
-    hog_list = [x[1].decode() for x in conshog]
-    io.store_list(stordir+'/conserved_HOGs.txt', hog_list, comment=[f'Ancestral lineage: {closest_corr.decode()}'])
+    hog_list = [outils.get_hog_id(x, hog_id_buff) for x in conshog]
+    io.store_list(stordir+'/conserved_HOGs.txt', hog_list, comment=[f'Ancestral lineage: {closest_corr}'])
+    db.close()
 
 def check_parameters(omamerfile, dbpath, stordir, taxid=None, original_FASTA_file = None,  isoform_file = None, taxonomic_rank=None):
 

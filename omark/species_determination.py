@@ -344,12 +344,12 @@ def reorganized_placement(placements, prot_by_clade):
 def reorganize_placements_from_taxid(placements, likely_clade,tax_tab, tax_buff):
     max_overlap = 0
     best_fit = list()
-    all_clades = [likely_clade] + [x[0].encode() for x in placements]
+    all_clades = [likely_clade] + [x[0] for x in placements]
     lineages = outils.get_full_lineage_omamer(all_clades, tax_tab, tax_buff, False)
 
     main_lineage = set(lineages[likely_clade])
     for candidate in placements:
-        candidate_lineage = set(lineages[candidate[0].encode()])
+        candidate_lineage = set(lineages[candidate[0]])
         overlap = len(main_lineage.intersection(candidate_lineage))
         if overlap>max_overlap:
             max_overlap = overlap
@@ -420,5 +420,5 @@ def find_taxa_from_ncbi(lineage, tax_tab, sp_tab, tax_buff):
                 except KeyError:
                     continue
                 if len(spec)>=1:
-                        return tax.encode('ascii')
+                        return tax
         return None

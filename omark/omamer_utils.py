@@ -171,7 +171,7 @@ def get_root_clade(tax_tab):
     while current_tax['ParentOff'] !=-1:
         ancestor_tax = current_tax['ParentOff']
         current_tax  = tax_tab[ancestor_tax]
-    return current_tax['ID']
+    return current_tax['ID'].decode()
 
 def get_name_to_taxid(taxnames, tax_tab):
     name_to_taxid = dict()
@@ -265,4 +265,4 @@ def get_hog_id(hog, hog_id_buff):
         return hog_id_buff[s:e].tobytes().decode("ascii")
     else:
         # hog_id_buff is set to None
-        return hog["OmaID"]
+        return hog["OmaID"].decode()
