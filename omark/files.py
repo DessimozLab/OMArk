@@ -13,7 +13,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with OMArk. If not, see <http://www.gnu.org/licenses/>.
         '''
-import Bio
+from Bio import SeqIO
 import re
 import jinja2   
 import os
@@ -44,7 +44,7 @@ def check_omamerfile(omamerfile):
 def check_FASTA(fasta_file):
     try:
         with open(fasta_file, "r") as handle:
-            fasta = Bio.SeqIO.parse(handle, "fasta")
+            fasta = SeqIO.parse(handle, "fasta")
             if not any(fasta):  # False when `fasta` is empty, i.e. wasn't a FASTA file
                 LOG.error("The FASTA was not in the correct format or was empty.")
                 return False
@@ -296,7 +296,7 @@ def organize_results(results, results_proteomes, selected_lineage, species_repor
 def store_contaminant_FASTA(stordir, basefile_name, prot_clade, original_FASTA_file):
     seqs_by_id = dict()
     with open(original_FASTA_file) as handle:
-        for record in Bio.SeqIO.parse(handle, "fasta"):
+        for record in SeqIO.parse(handle, "fasta"):
             seqs_by_id[record.id] = record
     for key, value in prot_clade.items():
         seqs_from_cont = list()
@@ -308,12 +308,12 @@ def store_contaminant_FASTA(stordir, basefile_name, prot_clade, original_FASTA_f
                     seq.description = seq.description +" Level="+str(level)+" ["+clade+"]"
                     seqs_from_cont.append(seq)
         with open(stordir+"/"+basefile_name+"_"+re.sub("[^0-9a-zA-Z]+", "_",key)+".fasta", "w") as out_handle:
-                Bio.SeqIO.write(seqs_from_cont, out_handle, 'fasta')
+                SeqIO.write(seqs_from_cont, out_handle, 'fasta')
 
 def store_incorrect_map_FASTA(stordir, basefile_name, not_mapped, incorrect_plac, original_FASTA_file):
     seqs_by_id = dict()
     with open(original_FASTA_file) as handle:
-        for record in Bio.SeqIO.parse(handle, "fasta"):
+        for record in SeqIO.parse(handle, "fasta"):
             seqs_by_id[record.id] = record
 
     seqs_not_map = list()
@@ -328,12 +328,11 @@ def store_incorrect_map_FASTA(stordir, basefile_name, not_mapped, incorrect_plac
             seqs_mapped.append(seq)
   
     with open(stordir+"/"+basefile_name+"_mapped.fasta", "w") as out_handle:
-        Bio.SeqIO.write(seqs_mapped, out_handle, 'fasta')    
+        SeqIO.write(seqs_mapped, out_handle, 'fasta')
     with open(stordir+"/"+basefile_name+"_no_hits.fasta", "w") as out_handle:
-        Bio.SeqIO.write(seqs_not_map, out_handle, 'fasta')
+        SeqIO.write(seqs_not_map, out_handle, 'fasta')
     with open(stordir+"/"+basefile_name+"_misplaced.fasta", "w") as out_handle:
-                Bio.SeqIO.write(seqs_misplaced, out_handle, 'fasta')   
-
+        SeqIO.write(seqs_misplaced, out_handle, 'fasta')
 
 def store_close_level(storfile, data):
         with open(storfile ,'w') as castor:
