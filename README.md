@@ -25,7 +25,7 @@ OMArk relies on an OMAmer database to run. You can download one from the latest 
 For all OMArk features to work correctly, it is recommended that this database covers a wide range of species. Thus we recommend using one constructed from the whole OMA database, often called [**LUCA.h5**](https://omabrowser.org/All/LUCA.h5) .   
 Using a database for a more restricted taxonomic range (Metazoa, Viridiplantae, Primates) would limit the ability of OMArk to detect contamination or to identify sequences of species that belong outside this range.  
 
-Alternatively, an OMAmer database is available through: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7359861.svg)](https://doi.org/10.5281/zenodo.7359861) - File :OMAmerDB.gz.  
+Alternatively, an OMAmer database is available through: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10034236.svg)](https://doi.org/10.5281/zenodo.10034236) - File :OMAmerDB.gz.  
 This is the LUCA.h5 database constructed from the December 2021 release of the OMA database and is the one that was used for the OMArk [preprint](https://www.biorxiv.org/content/10.1101/2022.11.25.517970v1).
 
 
@@ -33,18 +33,20 @@ This is the LUCA.h5 database constructed from the December 2021 release of the O
 
 Required arguments: ``-f (--file)``, ``-d (--database)``
 
-    usage: omark [-h] -f FILE -d DATABASE [-o OUTPUTFOLDER] [-t TAXID] [-of OG_FASTA] [-i ISOFORM_FILE] [-v]
+    usage: omark [-h] (-f FILE | -c) -d DATABASE [-o OUTPUTFOLDER] [-t TAXID] [-of OG_FASTA] [-i ISOFORM_FILE] [-r TAXONOMIC_RANK]  [-v]
 
 
 ## Arguments
 | Flag                                                         | Default         | Description                                                                                                                                                 |
 |:-------------------------------------------------------------|:----------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [``-f`` ``--file``](#markdown-header--file)                  |                 | Path to an OMAmer search output file                                                                                                                        |
+| [``-f`` ``--file``](#markdown-header--file)                  |                 |Path to an OMAmer search output file (Default mode)                                                                                                          |
+| [``-c`` ``--output_cHOGs``](#markdown-header--output_cHOGs)  | False           |Switch OMArk mode to only computing a list of conserved HOGs and output it as list. Can be used to obtain a set of genes on which to train models.           |
 | [``-d`` ``--db``](#markdown-header--database)                |                 | Path to an OMAmer database                                                                                                                                  |
 | [``-o`` ``--outputFolder``](#markdown-header--outputFolder)  | ./omark_output/ | Path to the folder into which OMArk results will be output. OMArk will create it if it does not exist.                                                      |
 | [``-t`` ``--taxid``](#markdown-header--taxid)                | None            | NCBI taxid corresponding to the input proteome (Optional).                                                                                                  |
 | [``-of`` ``--og_fasta``](#markdown-header--og_fasta)         | None            | The original proteomes file. Provide if you want optional FASTA file to be outputted by OMArk (Sequences by categories, sequences by detected species, etc) |
 | [``-i``, ``--isoform_file``](#markdown-header--isoform_file) | None            | A text file, listing all isoforms of each gene as semi-colon separated values, with one gene per line. Use if your input proteome include more than one protein per gene. See the [Splicing isoforms](#splicing-isoforms) section.|
+| [``-r`` ``--taxonomic-rank``](#markdown-header--taxonomic-rank)| None           |The taxonomic rank (genus, order, family...) that should be used as ancestral lineage if possible.                                                           |
 | [``-v`` ``--verbose``](#markdown-header--verbose)            | False           | Turn on logging information about OMArk progress.                                                                                                           |
 
 
