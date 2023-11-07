@@ -5,7 +5,11 @@ OMArk relies on the OMA orthology database, from which it exploits orthology rel
 
 ## Installation
 
-You can use OMArk by installing the package through PyPi:
+You can use OMArk by installing the package through conda:
+
+``conda install -c bioconda omark``
+
+Alternatively, it can also be installed through Pypi:
 
 ``pip install omark``
 
