@@ -253,6 +253,7 @@ if __name__=='__main__':
     if mapping_file:
         main_df, cont_df = integrate_external_data(main_df, cont_df, mapping_file, taxonomy_order=arg.taxonomy)
     if len(main_df)>0:
+        main_df.sort_values(by='Filename', inplace=True)
         plot_omark_df(main_df, savefile=output_figure)
     else:
         print('No data was found in this folder.')
