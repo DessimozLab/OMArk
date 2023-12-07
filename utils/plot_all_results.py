@@ -137,6 +137,7 @@ def create_df_from_results(file_list):
                                          'Inconsistent_Structurally_Consistent', 'Contaminant', 'Contaminant_Partially_Mapping', 'Contaminant_Fragments', 'Contaminant_Structurally_Consistent',
                                          'Unknown'])
     cont_df = pd.DataFrame(all_cont_data, columns=['Filename', 'Species_name', 'Main_Taxon', 'Contaminant', 'Contaminant_Taxid', 'Number_of_Proteins'])
+    omark_df.sort_values(by='Filename', inplace=True)
 
     return omark_df, cont_df
 
@@ -201,7 +202,6 @@ def plot_omark_df(omark_df, savefile=None, width=None, height=None, no_labels=Fa
 
     omark_df.plot.bar(y=['Single', 'Duplicated','Missing'], label=['Single', 'Duplicated', 'Missing'], color = ['#46bea1ff', '#cfee8eff','#ed1c5aff'],  ylim=(0,100), width=1.0, stacked=True, ax=axes[1], rasterized=True)
     xticks = axes[0].get_xaxis().set_visible(False)
-    #ticks = axes[0].get_yaxis().set_visible(False)
 
     xticks = axes[1].get_xaxis().set_visible(False)
     omark_df.plot.bar(y=['Consistent_Structurally_Consistent','Consistent_Partially_Mapping', 'Consistent_Fragments', 
