@@ -60,12 +60,12 @@ def parse_sum_file(sumfile):
             detected_species = list()
             for line in omaqsum.readlines():
                 if not in_cont:
-                    protein_nr_line = re.search("On the whole proteome, there \w+ ([0-9]+) proteins",line)
+                    protein_nr_line = re.search(r"On the whole proteome, there \w+ ([0-9]+) proteins",line)
                     if protein_nr_line:
                         main_data['Protein_number'] =int(protein_nr_line.group(1))
                     #S:Single:S, D:Duplicated[U:Unexpected,E:Expected],M:Missing
                     #resultline =  re.search("F:([-0-9.]+)%,D:([-0-9.]+)%,O:([-0-9.]+)%,U:([-0-9.]+)%,L:([-0-9.]+)", line)
-                    resultline =  re.search("S:([-0-9.]+)%,D:([-0-9.]+)%\[U:([-0-9.]+)%,E:([-0-9.]+)%\],M:([-0-9.]+)", line)
+                    resultline =  re.search(r"S:([-0-9.]+)%,D:([-0-9.]+)%\[U:([-0-9.]+)%,E:([-0-9.]+)%\],M:([-0-9.]+)", line)
 
                     if resultline:
                         results = resultline
@@ -81,7 +81,7 @@ def parse_sum_file(sumfile):
 
                     #C:Placements in correct lineage [P:Partial hits, F:Fragmented], E: Erroneous placement [P:Partial hits, F:Fragmented], N: no mapping 
                     #conservline =  re.search("C:([-0-9.]+)%,L:([-0-9.]+)%,O:([-0-9.]+)%,U:([-0-9.]+)%", line)
-                    conservline =  re.search("A:([-0-9.]+)%\[P:([-0-9.]+)%,F:([-0-9.]+)%\],I:([-0-9.]+)%\[P:([-0-9.]+)%,F:([-0-9.]+)%\],C:([-0-9.]+)%\[P:([-0-9.]+)%,F:([-0-9.]+)%\],U:([-0-9.]+)%", line)
+                    conservline =  re.search(r"A:([-0-9.]+)%\[P:([-0-9.]+)%,F:([-0-9.]+)%\],I:([-0-9.]+)%\[P:([-0-9.]+)%,F:([-0-9.]+)%\],C:([-0-9.]+)%\[P:([-0-9.]+)%,F:([-0-9.]+)%\],U:([-0-9.]+)%", line)
                     if conservline:
                         main_data['Consistent'] = float(conservline.group(1))
                         main_data['Consistent_Partially_Mapping'] = float(conservline.group(2))
