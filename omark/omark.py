@@ -220,7 +220,7 @@ def check_parameters(omamerfile, dbpath, stordir, taxid=None, original_FASTA_fil
     output_directory_valid = io.check_and_create_output_folder(stordir)
 
     if original_FASTA_file:
-        fasta_valid = io.check_FASTA(original_FASTA_file)
+        fasta_valid = io.check_FASTA(original_FASTA_file, omamerfile)
     else:
         fasta_valid = True
 

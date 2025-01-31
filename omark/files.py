@@ -41,17 +41,39 @@ def check_omamerfile(omamerfile):
         return False
     return True
 
-def check_FASTA(fasta_file):
+def check_FASTA(fasta_file, omamerfile):
     try:
         with open(fasta_file, "r") as handle:
             fasta = SeqIO.parse(handle, "fasta")
-            if not any(fasta):  # False when `fasta` is empty, i.e. wasn't a FASTA file
+            id_list_fasta = [x.id for x in fasta]
+
+            if len(id_list_fasta)==0:  # False when `fasta` is empty, i.e. wasn't a FASTA file
                 LOG.error("The FASTA was not in the correct format or was empty.")
                 return False
     except FileNotFoundError:
             LOG.error('The path to the FASTA file is not valid.')
             return False
+    omamer_id = []
+    try:
+        header=True
+        with open(omamerfile,'r') as f:
+            for line in f.readlines():
+                if not line.startswith("!"):
+                    if header:
+                        header=False
+                        continue
+                    omamer_id.append(line.split("\t")[0])
+    except FileNotFoundError:
+        pass
+    similar_ids = set(omamer_id).intersection(set(id_list_fasta))
+    if len(similar_ids)==0:
+        LOG.error('The identifiers in the OMAmer file and FASTA file do not match. Please make sure they do before using the -of option.')
+        return False
+    elif len(similar_ids) != len(set(omamer_id)):
+        LOG.error('All the OMAmer ids do not seem to exist in the FASTA file.')
+        return False
     return True
+
 
 def check_isoform_file(isoform_file):
     try:
