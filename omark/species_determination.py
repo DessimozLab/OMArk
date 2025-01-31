@@ -49,7 +49,7 @@ def check_rank(taxonomic_rank):
     #Rank options above genus - copied from https://github.com/ropensci/taxize/issues/835
     rank_options = [ 'domain', 'superkingdom', 'kingdom', 'subkingdom', 'infrakingdom', 'superphylum', 'phylum' ,'division', 'subphylum','subdivision', 'infradivision', 'superclass',
                     'class', 'subclass', 'infraclass', 'subterclass', 'parvclass', 'megacohort', 'supercohort', 'cohort', 'subcohort', 'infracohort' , 'superorder',
-                    'order', 'suborder', 'infraorder', 'parvorder' , 'superfamily', 'family', 'subfamily', 'supertribe', 'subtribe']
+                    'order', 'suborder', 'infraorder', 'parvorder' , 'superfamily', 'family', 'subfamily', 'supertribe', 'tribe', 'subtribe']
     if taxonomic_rank not in rank_options:
         available_options = ','.join(rank_options)
         LOG.error(f'The provided taxonomic rank is not a valid options. Valid options are {available_options}')
@@ -388,14 +388,34 @@ def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff,taxonom
     ncbi = get_ete_ncbi_db()
     name_to_lineage = outils.get_full_lineage_omamer([clade], tax_tab)
     lineage = name_to_lineage[clade]
+
     is_taxonomic_rank = False
     selected_tax = None
     selected_phylum_or_higher = True
     selected_rank = None
+    chosen_rank = False
+    previous_seen = None
+
     name_to_taxid = outils.get_name_to_taxid([x for x in lineage], tax_tab)
+    tax_clade = name_to_taxid[clade]
+    # Getting the full lineage from NCBI
+    lineage_ncbi = ncbi.get_lineage(tax_clade)
+    ranks = ncbi.get_rank(lineage_ncbi)
+    lineage_rank = [ranks.get(taxid, '') for taxid in lineage_ncbi]
+    if taxonomic_rank:
+        if taxonomic_rank in lineage_rank:
+            index_rank = lineage_rank.index(taxonomic_rank)
+        else:
+            index_rank = -1
     for tax in lineage:
         species = outils.get_species_from_taxon(tax, tax_tab, sp_tab, tax_buff)
         taxid = name_to_taxid[tax]
+        try:
+            #Assessing the position of the given taxid in the lineage list, to compare with the rank that may be requested
+            sp_rank_ncbi = lineage_ncbi.index(taxid)
+        except ValueError:
+            #If the taxid is not in index, setting it to a value that will make it avoid selecting the taxon
+            sp_rank_ncbi = len(lineage_ncbi)
         rank = ncbi.get_rank([taxid]).get(taxid,'')
         if rank == taxonomic_rank:
             is_taxonomic_rank = True
@@ -405,10 +425,22 @@ def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff,taxonom
         if len(species)>=threshold_species:
             if not selected_tax or rank==taxonomic_rank:
                 selected_tax =  tax
-                selected_rank =rank
+                selected_rank = rank
+
+                if rank==taxonomic_rank:
+                    chosen_rank = True
+                    is_taxonomic_rank = True
+            elif not chosen_rank and sp_rank_ncbi<index_rank and previous_seen is not None:
+                chosen_rank = True
+                selected_tax = previous_seen[0]
+                selected_rank = previous_seen[1]
+        previous_seen = (tax, rank)
+
     if taxonomic_rank:
         if is_taxonomic_rank:
             LOG.info(f'The ancestral lineage is selected at provided taxonomic rank: {taxonomic_rank}.')
+        elif chosen_rank:
+            LOG.info(f"The chosen rank {taxonomic_rank} is not explicitely stored in the OMAmer database. Instead chosing the closest clade that share the same species set: {selected_tax}")
         else:
             LOG.info(f'The provided taxonomic rank {taxonomic_rank} was not an option (too narrow or absent from our lineage option). Default ancestral lineage will be used.')
 
