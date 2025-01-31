@@ -75,12 +75,34 @@ def check_FASTA(fasta_file, omamerfile):
     return True
 
 
-def check_isoform_file(isoform_file):
+def check_isoform_file(isoform_file, omamerfile):
     try:
         with open(isoform_file,'r') as f:
-            pass
+            splice_ids=[]
+            for line in f.readlines():
+                splice_ids += line.strip("\n").split(";")
     except FileNotFoundError:
         LOG.error('The path to the isoform file is no valid.')
+        return False
+    omamer_id = []
+
+    try:
+        header=True
+        with open(omamerfile,'r') as f:
+            for line in f.readlines():
+                if not line.startswith("!"):
+                    if header:
+                        header=False
+                        continue
+                    omamer_id.append(line.split("\t")[0])
+    except FileNotFoundError:
+        pass
+    similar_ids = set(omamer_id).intersection(set(splice_ids))
+    if len(similar_ids)==0:
+        LOG.error('The identifiers in the OMAmer file and the splice file do not match. Please make sure they do before using the -i option.')
+        return False
+    elif len(similar_ids) != len(set(omamer_id)):
+        LOG.error('All the identifier in the OMAmer file are not found in the splice file. Please make sure they match before using the -i option.')
         return False
     return True
 

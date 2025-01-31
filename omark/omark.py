@@ -225,7 +225,7 @@ def check_parameters(omamerfile, dbpath, stordir, taxid=None, original_FASTA_fil
         fasta_valid = True
 
     if isoform_file:
-        isoform_valid = io.check_isoform_file(isoform_file)
+        isoform_valid = io.check_isoform_file(isoform_file, omamerfile)
     else:
         isoform_valid = True
 
