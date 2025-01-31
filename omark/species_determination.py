@@ -18,11 +18,27 @@ from omamer.hierarchy import get_descendants
 import ete3
 import omark.omamer_utils as outils
 from omark.utils import LOG
+import os
+
+ETE_TAXA_PATH=None
+
+#Change the global variable setting the path to the NCBI Taxonomy database. To use when users want to use a local copy
+def set_ete_taxa_path(path):
+    global ETE_TAXA_PATH
+    ETE_TAXA_PATH = path
+
+#Initialize the ete3 database, using a local path if it was defined before.
+def get_ete_ncbi_db():
+    if ETE_TAXA_PATH is None:
+        ncbi = ete3.NCBITaxa()
+    else:
+        ncbi = ete3.NCBITaxa(dbfile=ETE_TAXA_PATH)
+    return ncbi
 
 # Check whether the taxid seem to exist in the NCBI database (Using the get_lineage function)
 def check_taxid(taxid):
         try:
-            ncbi = ete3.NCBITaxa()
+            ncbi = get_ete_ncbi_db()
             linid = ncbi.get_lineage(taxid)
         except ValueError:
             LOG.error('The provided taxid is not found in the NCBI database')
@@ -369,7 +385,7 @@ def add_taxid(placements, tax_tab):
 
 #Return the closest ancestor of a clade with more than a threshold of species in omamer
 def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff,taxonomic_rank =None):
-    ncbi = ete3.NCBITaxa()
+    ncbi = get_ete_ncbi_db()
     name_to_lineage = outils.get_full_lineage_omamer([clade], tax_tab)
     lineage = name_to_lineage[clade]
     is_taxonomic_rank = False
@@ -406,7 +422,7 @@ def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff,taxonom
 # USER DETERMINED PLACEMENT
 def get_lineage_ncbi(taxid):
         lineage = list()
-        ncbi = ete3.NCBITaxa()
+        ncbi = get_ete_ncbi_db()
         linid = ncbi.get_lineage(taxid)
         linmap = ncbi.get_taxid_translator(linid)
         lineage = [linmap[x] for x in linid]

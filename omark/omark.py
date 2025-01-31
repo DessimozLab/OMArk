@@ -246,10 +246,14 @@ def launcher(args):
     taxonomic_rank = args.taxonomic_rank
     verbose = args.verbose
     only_conserved_HOGs = args.output_cHOGs
+    ete_ncbi_db = args.ete_ncbi_db
     log_level = 'INFO' if verbose else 'WARNING'
     set_log_level(log_level)
     LOG.info('Starting OMArk')
-    if only_conserved_HOGs:
+    if ete_ncbi_db is not None:
+        LOG.info(f'A custom path was offered fot the ete3 NCBI database. {ete_ncbi_db} will be used.')
+        spd.set_ete_taxa_path(ete_ncbi_db)
+    if only_conserved_HOGs: 
         LOG.info('The option to output only conserved_HOGs was selected')
         if not taxid :
             LOG.error('A taxid must be provided for this use-case')

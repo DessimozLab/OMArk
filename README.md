@@ -51,6 +51,7 @@ Required arguments: ``-f (--file)``, ``-d (--database)``
 | [``-of`` ``--og_fasta``](#markdown-header--og_fasta)         | None            | The original proteomes file. Provide if you want optional FASTA file to be outputted by OMArk (Sequences by categories, sequences by detected species, etc) |
 | [``-i``, ``--isoform_file``](#markdown-header--isoform_file) | None            | A text file, listing all isoforms of each gene as semi-colon separated values, with one gene per line. Use if your input proteome include more than one protein per gene. See the [Splicing isoforms](#splicing-isoforms) section.|
 | [``-r`` ``--taxonomic-rank``](#markdown-header--taxonomic-rank)| None           |The taxonomic rank (genus, order, family...) that should be used as ancestral lineage if possible.                                                           |
+| [``-e`` ``--ete_ncbi_db``](#markdown-header--ete_ncbi_db)    | None			 |Path to the ete3 NCBI database to be used. Default will use the default location at ~/.etetoolkit/taxa.sqlite.                                               |
 | [``-v`` ``--verbose``](#markdown-header--verbose)            | False           | Turn on logging information about OMArk progress.                                                                                                           |
 
 
