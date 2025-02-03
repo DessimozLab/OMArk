@@ -402,11 +402,11 @@ def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff,taxonom
     lineage_ncbi = ncbi.get_lineage(tax_clade)
     ranks = ncbi.get_rank(lineage_ncbi)
     lineage_rank = [ranks.get(taxid, '') for taxid in lineage_ncbi]
+    index_rank = -1
     if taxonomic_rank:
         if taxonomic_rank in lineage_rank:
             index_rank = lineage_rank.index(taxonomic_rank)
-        else:
-            index_rank = -1
+
     for tax in lineage:
         species = outils.get_species_from_taxon(tax, tax_tab, sp_tab, tax_buff)
         taxid = name_to_taxid[tax]
