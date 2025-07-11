@@ -3,6 +3,9 @@
 OMArk is a software for proteome (protein-coding gene repertoire) quality assessment. It provides measures of proteome completeness, characterizes the consistency of all protein coding genes with regard to their homologs, and identifies the presence of contamination from other species.
 OMArk relies on the OMA orthology database, from which it exploits orthology relationships, and on the OMAmer software for fast placement of all proteins into gene families.
 
+_Using OMArk in your research? Please cite:_
+> Nevers, Y., Warwick Vesztrocy, A., Rossier, V. et al. Quality assessment of gene repertoire annotations with OMArk. Nat Biotechnol 43, 124–133 (2025). https://doi.org/10.1038/s41587-024-02147-w
+
 ## Installation
 
 You can use OMArk by installing the package through conda:
