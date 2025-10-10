@@ -25,7 +25,7 @@ import omark.graphics as graph
 from omark.utils import LOG, set_log_level
 import sys
 
-def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None, taxonomic_rank= None, extract_conserved_only=True):
+def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None, min_n_species=5, taxonomic_rank= None, extract_conserved_only=True):
 
 
 
@@ -112,8 +112,8 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         #Add the taxid information to the species description list.
         placements = spd.add_taxid(placements, tax_tab)
         placements, prot_clade = spd.add_uncertain_contaminants(placements, prot_clade)
-        #Get the first parent of the chosen clade with at least 5 species
-        closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff, taxonomic_rank)
+        #Get the first parent of the chosen clade with at least min_n_species species
+        closest_corr = spd.get_sampled_taxa(likely_clade, min_n_species , tax_tab, sp_tab, tax_buff, taxonomic_rank)
 
         LOG.info('Ancestral lineage is '+closest_corr)
 
@@ -243,6 +243,7 @@ def launcher(args):
     taxid = args.taxid
     original_fasta = args.og_fasta
     isoform_file = args.isoform_file
+    min_n_species = args.min_n_species
     taxonomic_rank = args.taxonomic_rank
     verbose = args.verbose
     only_conserved_HOGs = args.output_cHOGs
@@ -266,7 +267,7 @@ def launcher(args):
             sys.exit(1)
     elif check_parameters(omamerfile, dbpath, outdir,taxid,original_fasta,isoform_file,taxonomic_rank):
         LOG.info('Input parameters passed validity check')
-        get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta, isoform_file=isoform_file, taxonomic_rank=taxonomic_rank)
+        get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta, isoform_file=isoform_file,min_n_species = min_n_species, taxonomic_rank=taxonomic_rank)
         LOG.info('Done')
 
     else:

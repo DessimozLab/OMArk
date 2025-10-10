@@ -406,6 +406,8 @@ def get_sampled_taxa(clade, threshold_species, tax_tab, sp_tab, tax_buff,taxonom
     if taxonomic_rank:
         if taxonomic_rank in lineage_rank:
             index_rank = lineage_rank.index(taxonomic_rank)
+    if threshold_species!=5:
+        LOG.info(f'The minimal number of species to select an ancestral lineage was set to {threshold_species}.')
 
     for tax in lineage:
         species = outils.get_species_from_taxon(tax, tax_tab, sp_tab, tax_buff)
