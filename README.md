@@ -56,6 +56,7 @@ Required arguments: ``-f (--file)``, ``-d (--database)``
 | [``-r`` ``--taxonomic-rank``](#markdown-header--taxonomic-rank)| None           |The taxonomic rank (genus, order, family...) that should be used as ancestral lineage if possible.                                                           |
 | [``-e`` ``--ete_ncbi_db``](#markdown-header--ete_ncbi_db)    | None			 |Path to the ete3 NCBI database to be used. Default will use the default location at ~/.etetoolkit/taxa.sqlite.                                               |
 | [``-v`` ``--verbose``](#markdown-header--verbose)            | False           | Turn on logging information about OMArk progress.                                                                                                           |
+| [``-n`` ``--min_n_species``](#markdown-header--verbose)      | 5               | The minimal number of species in the database belonging to a clade to select it as an ancestral lineage.                                                    |
 
 
 ## Input data
