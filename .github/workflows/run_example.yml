@@ -1,0 +1,44 @@
+name: Example Test Dataset
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-example-dataset:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Download LUCA.h5
+        run: wget https://omabrowser.org/All/LUCA.h5
+
+      - name: Run omamer search
+        run: |
+          mkdir output
+          omamer search \
+            --db LUCA.h5 \
+            --query example_data/UP000005640_9606.fasta \
+            --out output/UP000005640_9606.omamer
+
+      - name: Run omark
+        run: |
+          omark \
+            -f output/UP000005640_9606.omamer \
+            -d LUCA.h5 \
+            -o output/
+
+      - name: Compare output with expected
+        run: diff output/UP000005640_9606.sum example_data/omark_output/UP000005640_9606.sum
