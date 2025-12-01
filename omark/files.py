@@ -247,6 +247,15 @@ def write_templated_report(template_file, storfile, results, results_proteomes, 
         outfile.write(template.render(all_stats))
 
 
+def write_db_summary(sum_file, sum_data):
+    columns = ["Clade", "NCBI_TaxId", "Taxonomic_Rank","Species_Number", "Nr_Conserved_HOGs", "Nr_Total_HOGs","All_Species"]
+    with open(sum_file, "w") as sumfile:
+
+        sumfile.write("\t".join(columns)+"\n")
+        for line in sum_data:
+            sumfile.write("\t".join([str(x) for x in line])+"\n")
+
+
 #This function create a detailed dictionnary of all OMArk stats, by post-processing the results of the different analysis.
 def organize_results(results, results_proteomes, selected_lineage, species_report):
 

@@ -462,6 +462,11 @@ def get_lineage_ncbi(taxid):
         lineage = [linmap[x] for x in linid]
         return lineage
 
+def get_ranks(taxid_list):
+    ncbi = get_ete_ncbi_db()
+    ranks =  ncbi.get_rank(taxid_list)
+    return ranks
+
 def find_taxa_from_ncbi(lineage, tax_tab, sp_tab, tax_buff):
         spec  = []
         for tax in reversed(lineage):

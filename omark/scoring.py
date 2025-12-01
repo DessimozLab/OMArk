@@ -44,7 +44,7 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
     for t in poss_hog:
         # Maybe useful if we allow paralogs
         #all_desc = get_descendant_HOGs(t, tabi, chog_buff)
-        sp_hog=list()        
+        sp_hog=set()        
         clade_name = tax_tab[t['TaxOff']]['ID'].decode()
         if clade_name not in lineage :
                 continue
@@ -57,9 +57,9 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
                         desc_tax_name = tax_tab[desc['TaxOff']]["ID"].decode()
                         if desc_tax_name not in lineage :
                                continue
-                        sp_hog += [x[0].decode() for x in outils.get_species_from_omamer(desc,prot_tab, sp_tab, cprot_buff)]
-        sp_hog += [x[0].decode() for x in outils.get_species_from_omamer(t,prot_tab, sp_tab, cprot_buff)]
-        inter = set(sp_hog).intersection(set(sp_target))
+                        sp_hog.update({x[0].decode() for x in outils.get_species_from_omamer(desc,prot_tab, sp_tab, cprot_buff)})
+        sp_hog.update({x[0].decode() for x in outils.get_species_from_omamer(t,prot_tab, sp_tab, cprot_buff)})
+        inter = sp_hog.intersection(set(sp_target))
         #print(len(inter))
         #print(len(sp_target))
         if len(inter)>=threshold*len(sp_target):
@@ -68,6 +68,10 @@ def get_conserved_hogs(clade, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,   cpr
         #    print(t)
         #omamer.hierarchy.get_descendant_species_taxoffs(hog_off, tabi, chog_buff, cprot_buff, prot2speoff, speoff2taxoff
     return found_hog, poss_hog
+
+
+
+
 
 def get_root_HOGs_descendants(lineage, tax_tab, hog_tab, fam_tab, tax_buff):
 
