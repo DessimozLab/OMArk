@@ -3,6 +3,9 @@
 OMArk is a software for proteome (protein-coding gene repertoire) quality assessment. It provides measures of proteome completeness, characterizes the consistency of all protein coding genes with regard to their homologs, and identifies the presence of contamination from other species.
 OMArk relies on the OMA orthology database, from which it exploits orthology relationships, and on the OMAmer software for fast placement of all proteins into gene families.
 
+_Using OMArk in your research? Please cite:_
+> Nevers, Y., Warwick Vesztrocy, A., Rossier, V. et al. Quality assessment of gene repertoire annotations with OMArk. Nat Biotechnol 43, 124–133 (2025). https://doi.org/10.1038/s41587-024-02147-w
+
 ## Installation
 
 You can use OMArk by installing the package through conda:
@@ -51,7 +54,9 @@ Required arguments: ``-f (--file)``, ``-d (--database)``
 | [``-of`` ``--og_fasta``](#markdown-header--og_fasta)         | None            | The original proteomes file. Provide if you want optional FASTA file to be outputted by OMArk (Sequences by categories, sequences by detected species, etc) |
 | [``-i``, ``--isoform_file``](#markdown-header--isoform_file) | None            | A text file, listing all isoforms of each gene as semi-colon separated values, with one gene per line. Use if your input proteome include more than one protein per gene. See the [Splicing isoforms](#splicing-isoforms) section.|
 | [``-r`` ``--taxonomic-rank``](#markdown-header--taxonomic-rank)| None           |The taxonomic rank (genus, order, family...) that should be used as ancestral lineage if possible.                                                           |
+| [``-e`` ``--ete_ncbi_db``](#markdown-header--ete_ncbi_db)    | None			 |Path to the ete3 NCBI database to be used. Default will use the default location at ~/.etetoolkit/taxa.sqlite.                                               |
 | [``-v`` ``--verbose``](#markdown-header--verbose)            | False           | Turn on logging information about OMArk progress.                                                                                                           |
+| [``-n`` ``--min_n_species``](#markdown-header--verbose)      | 5               | The minimal number of species in the database belonging to a clade to select it as an ancestral lineage.                                                    |
 
 
 ## Input data

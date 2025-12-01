@@ -41,24 +41,68 @@ def check_omamerfile(omamerfile):
         return False
     return True
 
-def check_FASTA(fasta_file):
+def check_FASTA(fasta_file, omamerfile):
     try:
         with open(fasta_file, "r") as handle:
             fasta = SeqIO.parse(handle, "fasta")
-            if not any(fasta):  # False when `fasta` is empty, i.e. wasn't a FASTA file
+            id_list_fasta = [x.id for x in fasta]
+
+            if len(id_list_fasta)==0:  # False when `fasta` is empty, i.e. wasn't a FASTA file
                 LOG.error("The FASTA was not in the correct format or was empty.")
                 return False
     except FileNotFoundError:
             LOG.error('The path to the FASTA file is not valid.')
             return False
+    omamer_id = []
+    try:
+        header=True
+        with open(omamerfile,'r') as f:
+            for line in f.readlines():
+                if not line.startswith("!"):
+                    if header:
+                        header=False
+                        continue
+                    omamer_id.append(line.split("\t")[0])
+    except FileNotFoundError:
+        pass
+    similar_ids = set(omamer_id).intersection(set(id_list_fasta))
+    if len(similar_ids)==0:
+        LOG.error('The identifiers in the OMAmer file and FASTA file do not match. Please make sure they do before using the -of option.')
+        return False
+    elif len(similar_ids) != len(set(omamer_id)):
+        LOG.error('All the OMAmer ids do not seem to exist in the FASTA file.')
+        return False
     return True
 
-def check_isoform_file(isoform_file):
+
+def check_isoform_file(isoform_file, omamerfile):
     try:
         with open(isoform_file,'r') as f:
-            pass
+            splice_ids=[]
+            for line in f.readlines():
+                splice_ids += line.strip("\n").split(";")
     except FileNotFoundError:
         LOG.error('The path to the isoform file is no valid.')
+        return False
+    omamer_id = []
+
+    try:
+        header=True
+        with open(omamerfile,'r') as f:
+            for line in f.readlines():
+                if not line.startswith("!"):
+                    if header:
+                        header=False
+                        continue
+                    omamer_id.append(line.split("\t")[0])
+    except FileNotFoundError:
+        pass
+    similar_ids = set(omamer_id).intersection(set(splice_ids))
+    if len(similar_ids)==0:
+        LOG.error('The identifiers in the OMAmer file and the splice file do not match. Please make sure they do before using the -i option.')
+        return False
+    elif len(similar_ids) != len(set(omamer_id)):
+        LOG.error('All the identifier in the OMAmer file are not found in the splice file. Please make sure they match before using the -i option.')
         return False
     return True
 
@@ -201,6 +245,15 @@ def write_templated_report(template_file, storfile, results, results_proteomes, 
 
     with open(storfile, 'w') as outfile:
         outfile.write(template.render(all_stats))
+
+
+def write_db_summary(sum_file, sum_data):
+    columns = ["Clade", "NCBI_TaxId", "Taxonomic_Rank","Species_Number", "Nr_Conserved_HOGs", "Nr_Total_HOGs","All_Species"]
+    with open(sum_file, "w") as sumfile:
+
+        sumfile.write("\t".join(columns)+"\n")
+        for line in sum_data:
+            sumfile.write("\t".join([str(x) for x in line])+"\n")
 
 
 #This function create a detailed dictionnary of all OMArk stats, by post-processing the results of the different analysis.

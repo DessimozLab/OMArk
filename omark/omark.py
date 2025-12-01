@@ -14,9 +14,7 @@
             along with OMArk. If not, see <http://www.gnu.org/licenses/>.
         '''
 
-import argparse
 import os
-import omamer.database  
 import omark.files as io
 import omark.species_determination as spd
 import omark.omamer_utils as outils
@@ -25,7 +23,7 @@ import omark.graphics as graph
 from omark.utils import LOG, set_log_level
 import sys
 
-def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None, taxonomic_rank= None, extract_conserved_only=True):
+def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None, min_n_species=5, taxonomic_rank= None, extract_conserved_only=True):
 
 
 
@@ -44,30 +42,8 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
             omamer_version = "2.0.0"
         else:
             omamer_version = "0.2.0"
-        db = omamer.database.Database(dbpath)
-        if omamer_version == '2.0.0':
-            hog_tab = db._db_HOG[:]  # db._hog_tab[:]
-            prot_tab = db._db_Protein  # db._prot_tab
-            sp_tab = db._db_Species  # db._sp_tab
-            tax_tab = db._db_Taxonomy[:]  # db._tax_tab[:]
-            fam_tab = db._db_Family[:]  # db._fam_tab[:]
-            cprot_buff = db._db_ChildrenProt  # db._cprot_arr
-            tax_buff = db._db_ChildrenTax[:]  # db._ctax_arr[:]
-            chog_buff = db._db_ChildrenHOG  # db._chog_arr
-            hogtax_buff = db._db_HOGtaxa  # db._hog_taxa_buff
-            hog_id_buff = db._db_HOGIDBuffer[:]
-        else:
-            #Variables
-            hog_tab = db._hog_tab[:]
-            prot_tab = db._prot_tab
-            sp_tab = db._sp_tab
-            tax_tab = db._tax_tab[:]
-            fam_tab = db._fam_tab[:]
-            cprot_buff = db._cprot_arr
-            tax_buff = db._ctax_arr[:]
-            chog_buff = db._chog_arr
-            hogtax_buff = db._hog_taxa_buff
-            hog_id_buff = None
+        hog_tab, prot_tab, sp_tab, tax_tab, fam_tab, cprot_buff, tax_buff, chog_buff, hogtax_buff, hog_id_buff = outils.open_db(dbpath)
+
 
         if isoform_file:
             LOG.info('An isoform_file was provided.')
@@ -112,8 +88,8 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         #Add the taxid information to the species description list.
         placements = spd.add_taxid(placements, tax_tab)
         placements, prot_clade = spd.add_uncertain_contaminants(placements, prot_clade)
-        #Get the first parent of the chosen clade with at least 5 species
-        closest_corr = spd.get_sampled_taxa(likely_clade, 5 , tax_tab, sp_tab, tax_buff, taxonomic_rank)
+        #Get the first parent of the chosen clade with at least min_n_species species
+        closest_corr = spd.get_sampled_taxa(likely_clade, min_n_species , tax_tab, sp_tab, tax_buff, taxonomic_rank)
 
         LOG.info('Ancestral lineage is '+closest_corr)
 
@@ -136,7 +112,6 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
         LOG.info('Comparing the query gene repertoire to conserved ancestral HOGs')
         res_completeness, found_cons, nicons = sc.found_with_omamer(omamdata ,conshog, hog_tab, chog_buff, hog_id_buff)
 
-        db.close()
         LOG.info('Writing OMArk output files')
 
         #Store the taxonomic choices
@@ -169,31 +144,7 @@ def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= Tr
 
 
 def get_only_conserved_HOGs(dbpath, stordir, taxid, taxonomic_rank=None):
-    db = omamer.database.Database(dbpath)
-
-    #Variables
-    if hasattr(db, '_hog_tab'):
-        hog_tab = db._hog_tab[:]
-        prot_tab = db._prot_tab
-        sp_tab = db._sp_tab
-        tax_tab = db._tax_tab[:]
-        fam_tab = db._fam_tab[:]
-        cprot_buff = db._cprot_arr
-        tax_buff = db._ctax_arr[:]
-        chog_buff = db._chog_arr
-        hogtax_buff = db._hog_taxa_buff
-        hog_id_buff = None
-    else:
-        hog_tab = db._db_HOG[:]  # db._hog_tab[:]
-        prot_tab = db._db_Protein  # db._prot_tab
-        sp_tab = db._db_Species  # db._sp_tab
-        tax_tab = db._db_Taxonomy[:]  # db._tax_tab[:]
-        fam_tab = db._db_Family[:]  # db._fam_tab[:]
-        cprot_buff = db._db_ChildrenProt  # db._cprot_arr
-        tax_buff = db._db_ChildrenTax[:]  # db._ctax_arr[:]
-        chog_buff = db._db_ChildrenHOG  # db._chog_arr
-        hogtax_buff = db._db_HOGtaxa  # db._hog_taxa_buff
-        hog_id_buff = db._db_HOGIDBuffer[:]
+    hog_tab, prot_tab, sp_tab, tax_tab, fam_tab, cprot_buff, tax_buff, chog_buff, hogtax_buff, hog_id_buff = outils.open_db(dbpath)
     lin = spd.get_lineage_ncbi(taxid)
     likely_clade = spd.find_taxa_from_ncbi(lin, tax_tab, sp_tab,tax_buff)
     LOG.info('A taxid was provided. The query taxon is '+likely_clade)
@@ -207,7 +158,30 @@ def get_only_conserved_HOGs(dbpath, stordir, taxid, taxonomic_rank=None):
 
     hog_list = [outils.get_hog_id(x, hog_id_buff) for x in conshog]
     io.store_list(stordir+'/conserved_HOGs.txt', hog_list, comment=[f'Ancestral lineage: {closest_corr}'])
-    db.close()
+
+def summarize_species_db(dbpath,output_file):
+    hog_tab, prot_tab, sp_tab, tax_tab, fam_tab, cprot_buff, tax_buff, chog_buff, hogtax_buff, hog_id_buff = outils.open_db(dbpath)
+    full_summary = []
+    spec_by_tax = outils.get_spec_by_tax(tax_tab,sp_tab, tax_buff )
+    nr_sp_by_tax = {x : len(y) for x,y in spec_by_tax.items() if len(y)>=5}
+    name_to_taxid= outils.get_name_to_taxid([x for x in spec_by_tax.keys()], tax_tab)
+    all_taxids =  name_to_taxid.values()
+
+    taxid_ranks = spd.get_ranks(all_taxids)
+    for spec in spec_by_tax:
+        all_sp = sorted(list(spec_by_tax.get(spec)))
+        nr_spec = nr_sp_by_tax.get(spec,0)
+        if nr_spec<5:
+            continue
+        conshog, cladehog = sc.get_conserved_hogs(spec, hog_tab, prot_tab, sp_tab, tax_tab, fam_tab,  cprot_buff,chog_buff, tax_buff, hogtax_buff, True, threshold=0.8)
+        lineage_rhog = sc.get_root_HOGs_descendants(spec, tax_tab, hog_tab, fam_tab,tax_buff)
+        nr_cons_hog  = len(conshog)
+        nr_hog_taxon = len(cladehog+lineage_rhog)
+        taxid = name_to_taxid[spec]
+        rank = taxid_ranks.get(taxid,None)
+        all_data_spec  = (spec, taxid, rank,nr_spec, nr_cons_hog, nr_hog_taxon,",".join(all_sp))
+        full_summary.append(all_data_spec)
+    io.write_db_summary(output_file, full_summary)
 
 def check_parameters(omamerfile, dbpath, stordir, taxid=None, original_FASTA_file = None,  isoform_file = None, taxonomic_rank=None):
 
@@ -220,12 +194,12 @@ def check_parameters(omamerfile, dbpath, stordir, taxid=None, original_FASTA_fil
     output_directory_valid = io.check_and_create_output_folder(stordir)
 
     if original_FASTA_file:
-        fasta_valid = io.check_FASTA(original_FASTA_file)
+        fasta_valid = io.check_FASTA(original_FASTA_file, omamerfile)
     else:
         fasta_valid = True
 
     if isoform_file:
-        isoform_valid = io.check_isoform_file(isoform_file)
+        isoform_valid = io.check_isoform_file(isoform_file, omamerfile)
     else:
         isoform_valid = True
 
@@ -243,13 +217,19 @@ def launcher(args):
     taxid = args.taxid
     original_fasta = args.og_fasta
     isoform_file = args.isoform_file
+    min_n_species = args.min_n_species
     taxonomic_rank = args.taxonomic_rank
     verbose = args.verbose
     only_conserved_HOGs = args.output_cHOGs
+    ete_ncbi_db = args.ete_ncbi_db
+    summarize_db = args.summarize_db
     log_level = 'INFO' if verbose else 'WARNING'
     set_log_level(log_level)
     LOG.info('Starting OMArk')
-    if only_conserved_HOGs:
+    if ete_ncbi_db is not None:
+        LOG.info(f'A custom path was offered fot the ete3 NCBI database. {ete_ncbi_db} will be used.')
+        spd.set_ete_taxa_path(ete_ncbi_db)
+    if only_conserved_HOGs: 
         LOG.info('The option to output only conserved_HOGs was selected')
         if not taxid :
             LOG.error('A taxid must be provided for this use-case')
@@ -260,9 +240,18 @@ def launcher(args):
         else:
             LOG.error('Exiting because one or more parameters are incorrect')
             sys.exit(1)
+    elif summarize_db:
+        LOG.info('The option to create a summary of the database content was selected. This can take a long time, please refer to the file available at https://omabrowser.org/oma/current/ if you are using the current LUCA DB.')
+        if outils.check_database(dbpath) and io.check_and_create_output_folder(outdir):
+            summarize_species_db(dbpath,os.path.join(outdir,"db_summary.omark.tsv"))
+            LOG.info('Done')
+
+        else:
+            LOG.error('Exiting because one or more parameters are incorrect')
+            sys.exit(1)
     elif check_parameters(omamerfile, dbpath, outdir,taxid,original_fasta,isoform_file,taxonomic_rank):
         LOG.info('Input parameters passed validity check')
-        get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta, isoform_file=isoform_file, taxonomic_rank=taxonomic_rank)
+        get_omamer_qscore(omamerfile, dbpath, outdir, taxid, original_FASTA_file = original_fasta, isoform_file=isoform_file,min_n_species = min_n_species, taxonomic_rank=taxonomic_rank)
         LOG.info('Done')
 
     else:

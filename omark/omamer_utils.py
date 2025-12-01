@@ -18,35 +18,14 @@ from omamer.hierarchy import get_descendants, get_leaves, get_root_leaf_offsets,
 from tables.exceptions import HDF5ExtError
 import omamer.database
 from omark.utils import LOG
+import numpy as np
+import tqdm
 
 def check_database(dbpath):
     #Check errors in the database parameter.
     valid = True
     try:
-        db = omamer.database.Database(dbpath)
-        if hasattr(db, '_hog_tab'):
-
-            hog_tab = db._hog_tab
-            prot_tab = db._prot_tab
-            sp_tab = db._sp_tab
-            tax_tab = db._tax_tab
-            fam_tab = db._fam_tab
-            cprot_buff = db._cprot_arr
-            tax_buff = db._ctax_arr
-            chog_buff = db._chog_arr
-            hogtax_buff = db._hog_taxa_buff
-        else:
-            hog_tab = db._db_HOG[:]  # db._hog_tab[:]
-            prot_tab = db._db_Protein  # db._prot_tab
-            sp_tab = db._db_Species  # db._sp_tab
-            tax_tab = db._db_Taxonomy[:]  # db._tax_tab[:]
-            fam_tab = db._db_Family[:]  # db._fam_tab[:]
-            cprot_buff = db._db_ChildrenProt  # db._cprot_arr
-            tax_buff = db._db_ChildrenTax[:]  # db._ctax_arr[:]
-            chog_buff = db._db_ChildrenHOG  # db._chog_arr
-            hogtax_buff = db._db_HOGtaxa  # db._hog_taxa_buff
-            hog_id_buff = db._db_HOGIDBuffer[:]
-        db.close()
+        open_db(dbpath)
     except OSError:
         LOG.error('Path to the OMAmer database is not valid.')
         valid = False
@@ -56,8 +35,37 @@ def check_database(dbpath):
     except AttributeError:
         LOG.error('The provided HDF5 database is not a correct OMAmer database.')
         valid = False
-        db.close()
     return valid
+
+
+def open_db(db_file):
+    db = omamer.database.Database(db_file)
+
+    #Variables
+    if hasattr(db, '_hog_tab'):
+        hog_tab = db._hog_tab[:]
+        prot_tab = db._prot_tab[:]
+        sp_tab = db._sp_tab[:]
+        tax_tab = db._tax_tab[:]
+        fam_tab = db._fam_tab[:]
+        cprot_buff = db._cprot_arr[:]
+        tax_buff = db._ctax_arr[:]
+        chog_buff = db._chog_arr[:]
+        hogtax_buff = db._hog_taxa_buff[:]
+        hog_id_buff = None
+    else:
+        hog_tab = db._db_HOG[:]  # db._hog_tab[:]
+        prot_tab = db._db_Protein[:]  # db._prot_tab
+        sp_tab = db._db_Species[:]  # db._sp_tab
+        tax_tab = db._db_Taxonomy[:]  # db._tax_tab[:]
+        fam_tab = db._db_Family[:]  # db._fam_tab[:]
+        cprot_buff = db._db_ChildrenProt[:]  # db._cprot_arr
+        tax_buff = db._db_ChildrenTax[:]  # db._ctax_arr[:]
+        chog_buff = db._db_ChildrenHOG[:]  # db._chog_arr
+        hogtax_buff = db._db_HOGtaxa[:]  # db._hog_taxa_buff
+        hog_id_buff = db._db_HOGIDBuffer[:]
+    db.close()
+    return hog_tab, prot_tab, sp_tab, tax_tab, fam_tab, cprot_buff, tax_buff, chog_buff, hogtax_buff, hog_id_buff
 
 def get_hog_implied_taxa(hog_off, hog_tab, tax_tab, ctax_buff, chog_buff):
     '''
@@ -250,10 +258,8 @@ def get_species_from_omamer(hog, prot_tab, spe_tab, cprot_buff) :
     sp_list = list()
     chog_off = hog["ChildrenProtOff"]
     prots = cprot_buff[chog_off : chog_off + hog["ChildrenProtNum"]]
-
-    for p in prots:        
-        spe_off = prot_tab[p][1]
-        sp_list.append(spe_tab[spe_off])
+    spe_offs = prot_tab[prots]["SpeOff"]
+    sp_list = list(spe_tab[spe_offs])
 
     return sp_list
 
