@@ -15,9 +15,10 @@
 '''
 
 from datetime import date
+from importlib.metadata import version as omark_version
 
 __packagename__ = "omark"
-__version__ = "0.4.0"
+__version__ = omark_version("omark")
 __copyright__ = "(C) 2022-{:d} Yannis Nevers  <yannis.nevers@unil.ch>".format(
     date.today().year
 )

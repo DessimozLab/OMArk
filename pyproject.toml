@@ -1,0 +1,37 @@
+[project]
+name = "omark"
+version = "0.4.0"
+description = "OMArk - Proteome quality assesment based on OMAmer placements"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-file = "LICENSE"
+requires-python = ">=3.9,<3.13"
+authors = [
+    { name  = "Yannis Nevers", email = "yannis.nevers@unil.ch"},
+]
+dependencies = [
+    "biopython >1.83,<2",
+    "ete3",
+    "jinja2",
+    "matplotlib",
+    "omamer>=2.1.0",
+]
+keywords = ["Proteome quality", "Sequence annotation", "Quality control", "Molecular evolution"]
+classifiers = [
+  "Development Status :: 5 - Production",
+  "Programming Language :: Python"
+]
+
+[project.urls]
+Homepage = "https://github.com/DessimozLab/omark"
+
+[project.scripts]
+omark = "omark.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9.14,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "./"
+data = ["omark/assets"]

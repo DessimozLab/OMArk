@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 '''
             OMArk - Quality assesment of coding-gene repertoire annotation
             (C) 2022 Yannis Nevers <yannis.nevers@unil.ch>
@@ -17,7 +15,7 @@
         '''
 
 import argparse
-import omark.omark as omark
+from . import omark
 
 def build_arg_parser():
     """Handle the parameter sent when executing the script from the terminal
@@ -48,8 +46,7 @@ def build_arg_parser():
     return parser
 
 
-if __name__=='__main__':
-	
+def main():
     parser = build_arg_parser()  
     arg = parser.parse_args()
     omark.launcher(arg)
