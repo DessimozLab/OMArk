@@ -17,7 +17,7 @@ from Bio import SeqIO
 import re
 import jinja2   
 import os
-from omark.utils import LOG
+from .utils import LOG
 
 #This function is called to make sure the input file correspond to OMArk assumption.
 #It return a boolean consisting of whether an errror was detected and print the reason for

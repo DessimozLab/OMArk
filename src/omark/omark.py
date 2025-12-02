@@ -15,19 +15,16 @@
         '''
 
 import os
-import omark.files as io
-import omark.species_determination as spd
-import omark.omamer_utils as outils
-import omark.scoring as sc
-import omark.graphics as graph
-from omark.utils import LOG, set_log_level
 import sys
+from . import files as io
+from . import species_determination as spd
+from . import omamer_utils as outils
+from . import scoring as sc
+from . import graphics as graph
+from .utils import LOG, set_log_level
+
 
 def get_omamer_qscore(omamerfile, dbpath, stordir, taxid=None, contamination= True, original_FASTA_file = None, force = True, isoform_file = None, min_n_species=5, taxonomic_rank= None, extract_conserved_only=True):
-
-
-
-	   
     allres = dict()
     
     basefile = '.'.join(omamerfile.split('/')[-1].split('.')[:-1])

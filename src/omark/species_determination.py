@@ -14,11 +14,9 @@
             along with OMArk. If not, see <http://www.gnu.org/licenses/>.
         '''
 
-from omamer.hierarchy import get_descendants
 import ete3
-import omark.omamer_utils as outils
-from omark.utils import LOG
-import os
+from . import omamer_utils as outils
+from .utils import LOG
 
 ETE_TAXA_PATH=None
 

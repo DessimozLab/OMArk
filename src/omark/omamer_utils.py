@@ -17,7 +17,7 @@
 from omamer.hierarchy import get_descendants, get_leaves, get_root_leaf_offsets, get_children
 from tables.exceptions import HDF5ExtError
 import omamer.database
-from omark.utils import LOG
+from .utils import LOG
 import numpy as np
 import tqdm
 
