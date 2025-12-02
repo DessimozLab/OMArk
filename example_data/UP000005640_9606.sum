@@ -1,0 +1,15 @@
+#The selected clade was Hominidae
+#Number of conserved HOGs is: 16950
+#Results on conserved HOGs is:
+#S:Single:S, D:Duplicated[U:Unexpected,E:Expected],M:Missing
+S:16553,D:250[U:136,E:114],M:147
+S:97.66%,D:1.47%[U:0.80%,E:0.67%],M:0.87%
+#On the whole proteome, there is 20585 proteins
+#Of which:
+#A:Accurate - placements in consistent lineage[P:Partial hits,F:Fragmented], I: Inconsistent placements[P:Partial hits,F:Fragmented], C: Likely Contamination[P:Partial hits,F:Fragmented], U: Unknown 
+A:20166[P:542,F:217],I:329[P:134,F:92],C:0[P:0,F:0],U:90
+A:97.96%[P:2.63%,F:1.05%],I:1.60%[P:0.65%,F:0.45%],C:0.00%[P:0.00%,F:0.00%],U:0.44%
+#From HOG placement, the detected species are:
+#Clade	NCBI taxid	Number of associated proteins	Percentage of proteome's total
+Homo sapiens	9606	20495	99.56%
+

@@ -41,4 +41,4 @@ jobs:
             -o output/
 
       - name: Compare output with expected
-        run: diff output/UP000005640_9606.sum example_data/omark_output/UP000005640_9606.sum
+        run: diff output/UP000005640_9606.sum example_data/UP000005640_9606.sum
