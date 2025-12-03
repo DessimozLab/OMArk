@@ -18,8 +18,7 @@ dependencies = [
 ]
 keywords = ["Proteome quality", "Sequence annotation", "Quality control", "Molecular evolution"]
 classifiers = [
-  "Development Status :: 5 - Production",
-  "Programming Language :: Python"
+  "Development Status :: 5 - Production/Stable"
 ]
 
 [project.urls]
