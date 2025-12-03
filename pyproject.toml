@@ -5,7 +5,7 @@ description = "OMArk - Proteome quality assesment based on OMAmer placements"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE", "COPYING.LESSER", "COPYING"]
-requires-python = ">=3.9"
+requires-python = ">=3.9, <3.13"
 authors = [
     { name  = "Yannis Nevers", email = "yannis.nevers@unil.ch"},
 ]
