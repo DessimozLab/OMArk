@@ -1,6 +1,6 @@
 [project]
 name = "omark"
-version = "0.4.0"
+version = "0.4.1"
 description = "OMArk - Proteome quality assesment based on OMAmer placements"
 readme = "README.md"
 license = "GPL-3.0-or-later"
