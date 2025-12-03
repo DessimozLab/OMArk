@@ -4,13 +4,13 @@ version = "0.4.0"
 description = "OMArk - Proteome quality assesment based on OMAmer placements"
 readme = "README.md"
 license = "GPL-3.0-or-later"
-license-file = "LICENSE"
-requires-python = ">=3.9,<3.13"
+license-files = ["LICENSE", "COPYING.LESSER", "COPYING"]
+requires-python = ">=3.9"
 authors = [
     { name  = "Yannis Nevers", email = "yannis.nevers@unil.ch"},
 ]
 dependencies = [
-    "biopython >1.83,<2",
+    "biopython >1.83",
     "ete3",
     "jinja2",
     "matplotlib",
