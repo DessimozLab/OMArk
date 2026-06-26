@@ -25,13 +25,15 @@ def build_arg_parser():
     A parser object with the chosen option and parameters"""
 
     parser = argparse.ArgumentParser(description="Compute an OMA quality score from the OMAmer file of a proteome.")
+
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-f', '--file', type=str, help="Input OMAmer file - obtained as output from an OMAmer search.")    
     group.add_argument('-c', '--output_cHOGs', help='Switch OMArk mode to only computing a list of conserved HOGs and output it as list. Can be used to obtain a set of genes on which to train', action='store_true')
     group.add_argument('-s', '--summarize_db', help='Switch OMArk mode to summarize the clade content of the OMAmer DB (Number of species per clade, number of HOGs used,...). This mode will take a few hours to run. Refer to the data available' \
     'at https://omabrowser.org/oma/current/ if you are using the default database.', action='store_true')
+    group.add_argument( '--version', help='Print the version of the software and exit', action='store_true')
 
-    parser.add_argument('-d', '--database', type=str, help="The OMAmer database.", required=True)
+    parser.add_argument('-d', '--database', type=str, help="The OMAmer database.", default=None)
     parser.add_argument('-t', '--taxid', type=int, help='Taxonomic identifier', default=None)
     parser.add_argument('-o', '--outputFolder', type=str, help="The folder containing output data the script wilp generate.", default="./omark_output/")
     parser.add_argument('-n', "--min_n_species", type=int, help="The minimal number of species in the database belonging to a clade to select it as an ancestral lineage", default=5)

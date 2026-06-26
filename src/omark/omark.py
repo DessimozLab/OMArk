@@ -21,6 +21,8 @@ from . import species_determination as spd
 from . import omamer_utils as outils
 from . import scoring as sc
 from . import graphics as graph
+from . import __version__
+
 from .utils import LOG, set_log_level
 
 
@@ -217,15 +219,23 @@ def launcher(args):
     min_n_species = args.min_n_species
     taxonomic_rank = args.taxonomic_rank
     verbose = args.verbose
+    version = args.version
     only_conserved_HOGs = args.output_cHOGs
     ete_ncbi_db = args.ete_ncbi_db
     summarize_db = args.summarize_db
     log_level = 'INFO' if verbose else 'WARNING'
     set_log_level(log_level)
+    if version:
+        print(__version__)
+        sys.exit()
     LOG.info('Starting OMArk')
     if ete_ncbi_db is not None:
         LOG.info(f'A custom path was offered fot the ete3 NCBI database. {ete_ncbi_db} will be used.')
         spd.set_ete_taxa_path(ete_ncbi_db)
+    if dbpath is None:
+        LOG.error("The -d/--database argument is required.")
+        sys.exit(1)
+ 
     if only_conserved_HOGs: 
         LOG.info('The option to output only conserved_HOGs was selected')
         if not taxid :
