@@ -162,7 +162,7 @@ def read_mapping_file(mapfile):
         for elem in datalabel:
             if elem.lower()=='taxid':
                 #Load the taxonomy database only if the taxonomy option is used
-                from ete3 import NCBITaxa
+                from ete4 import NCBITaxa
                 ncbi =  NCBITaxa()
         for line in f.readlines():
             filename = None

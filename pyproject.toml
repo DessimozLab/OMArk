@@ -11,7 +11,7 @@ authors = [
 ]
 dependencies = [
     "biopython >1.83",
-    "ete3",
+    "ete4>=4.3.0",
     "jinja2",
     "matplotlib",
     "omamer>=2.1.0",

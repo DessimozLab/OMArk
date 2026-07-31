@@ -230,7 +230,7 @@ def launcher(args):
         sys.exit()
     LOG.info('Starting OMArk')
     if ete_ncbi_db is not None:
-        LOG.info(f'A custom path was offered fot the ete3 NCBI database. {ete_ncbi_db} will be used.')
+        LOG.info(f'A custom path was offered fot the ete4 NCBI database. {ete_ncbi_db} will be used.')
         spd.set_ete_taxa_path(ete_ncbi_db)
     if dbpath is None:
         LOG.error("The -d/--database argument is required.")

@@ -14,7 +14,7 @@
             along with OMArk. If not, see <http://www.gnu.org/licenses/>.
         '''
 
-import ete3
+from ete4 import NCBITaxa, Tree
 from . import omamer_utils as outils
 from .utils import LOG
 
@@ -25,12 +25,12 @@ def set_ete_taxa_path(path):
     global ETE_TAXA_PATH
     ETE_TAXA_PATH = path
 
-#Initialize the ete3 database, using a local path if it was defined before.
+#Initialize the ete4 database, using a local path if it was defined before.
 def get_ete_ncbi_db():
     if ETE_TAXA_PATH is None:
-        ncbi = ete3.NCBITaxa()
+        ncbi = NCBITaxa()
     else:
-        ncbi = ete3.NCBITaxa(dbfile=ETE_TAXA_PATH)
+        ncbi = NCBITaxa(dbfile=ETE_TAXA_PATH)
     return ncbi
 
 # Check whether the taxid seem to exist in the NCBI database (Using the get_lineage function)
@@ -131,7 +131,8 @@ def tree_from_taxlist(all_taxa, tax_tab):
         oldest_ancestor = name_to_lineage[list(all_names)[0]][-1]
     else:
         oldest_ancestor = outils.get_root_clade(tax_tab)
-    t = ete3.Tree(name=oldest_ancestor)
+    t = Tree()
+    t.name = oldest_ancestor
     existing_node = [oldest_ancestor]
     curr_node = t
     for name, count in all_taxa.items():
@@ -142,7 +143,7 @@ def tree_from_taxlist(all_taxa, tax_tab):
                 curr_node = curr_node.add_child(name=clade)
                 existing_node.append(clade)
             else:
-                curr_node = t&clade
+                curr_node = t[clade]
 
     return t
 
@@ -153,7 +154,7 @@ def get_likely_spec(t, score, numb, tax_to_spec, prop_inherited):
     cur_score = score.get(t.name,0)
     cur_numb = numb.get(t.name,0)
     cur_sp = tax_to_spec[t.name]
-    if t.is_leaf():
+    if t.is_leaf:
         return [(t.name, cur_score, cur_numb,0)]
     all_child = list()
     for child in t.get_children():
@@ -219,13 +220,13 @@ def compute_protein_breakdown(all_plac,t, prot_by_taxa, include_uncertain=True):
     prots_by_clade = dict()
     #Lists of clades detected from placement and position in the tree
     clade_list = [ x[0] for x in all_plac]
-    node_list = [t&x for x in clade_list]
+    node_list = [t[x] for x in clade_list]
     ancestor_list = list()
     for node in node_list:
         all_closest_ancestor = []
         for snd_node in node_list:
-            ca = t.get_common_ancestor(node, snd_node)
-            depth = t.get_distance(ca)
+            ca = t.common_ancestor(node, snd_node)
+            depth = t.get_distance(t, ca, topological=True)
             all_closest_ancestor.append(ca)
         #Get a list of closest common ancestor to the closest detected species
         ancestor_list.append(all_closest_ancestor)
@@ -260,7 +261,7 @@ def compute_protein_breakdown(all_plac,t, prot_by_taxa, include_uncertain=True):
             if cur_node.name not in seen_nodes:
                 all_prots.append((level, cur_node.name, prot_by_taxa.get(cur_node.name,[])))
                 seen_nodes.append(cur_node.name)
-            all_children = cur_node.get_descendants()
+            all_children = cur_node.descendants()
             for node_child in all_children :
                 if node_child.name not in seen_nodes:
                     all_prots.append((level, node_child.name, prot_by_taxa.get(node_child.name,[])))
@@ -268,7 +269,7 @@ def compute_protein_breakdown(all_plac,t, prot_by_taxa, include_uncertain=True):
 
             level += 1
             prots_by_clade[target_clade] = all_prots
-            if cur_node.is_root():
+            if cur_node.is_root:
                 seen_all = True
             else:
                 cur_node = cur_node.up
