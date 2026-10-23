@@ -14,7 +14,7 @@ dependencies = [
     "ete3",
     "jinja2",
     "matplotlib",
-    "omamer>=2.1.0",
+    "omamer>=2.1.0,<3,!=2.1.1",
 ]
 keywords = ["Proteome quality", "Sequence annotation", "Quality control", "Molecular evolution"]
 classifiers = [
